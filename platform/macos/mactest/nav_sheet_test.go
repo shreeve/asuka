@@ -544,9 +544,10 @@ func TestNavZoomFrom(t *testing.T) {
 // A movable sheet is a window of its own, not a sheet: a child of its
 // window, centered over it, the key window, popping in as an alert panel
 // does, which the user can move and resize. Its window takes no presses
-// meanwhile. A fit one opens at its content's size and follows it until
-// the user resizes it, after which the user's size stays. Escape and its
-// close button dismiss it.
+// meanwhile. A fit one opens at its content's size, the least the user
+// can size it to; after that its size is its window's, which its content
+// is laid out at, whatever the content does. Escape and its close button
+// dismiss it.
 func TestNavMovableSheet(t *testing.T) {
 	a := Run(t, `
 		app { Root() }
@@ -626,12 +627,20 @@ func TestNavMovableSheet(t *testing.T) {
 		shown(what, func(w map[string]any, s *Node) bool { _, ch := size(w["content"]); return ch == h })
 	}
 	fits("opened at its content's height", base)
+	if min, ok := sheetWindow(sheetOf(a.Tree()))["minSize"].([]any); !ok || len(min) < 2 || min[1].(float64) != base {
+		t.Fatalf("its least size %v, not its content's height %v", sheetWindow(sheetOf(a.Tree()))["minSize"], base)
+	}
+	// Its content grows: the window keeps its size, its environment that size.
 	a.Do("tap More")
-	fits("grown with its content", base+50)
+	shown("its size kept", func(w map[string]any, s *Node) bool {
+		cw, ch := size(w["content"])
+		ew, eh := pair(s.Get("env"))
+		return ch == base && ew == cw && eh == ch
+	})
 	// A click on its window goes nowhere.
 	a.Do("click Count")
-	// The user resizes it: that size stays as its content changes, and
-	// its environment is that size.
+	// The user resizes it: its environment is that size, as its content
+	// changes too.
 	a.Do("sheetresize 500,420")
 	shown("resized", func(w map[string]any, s *Node) bool {
 		cw, ch := size(w["content"])

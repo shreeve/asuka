@@ -16,6 +16,8 @@
 //     over it, popping in from its center as an alert panel does; its
 //     window takes no presses, scrolls, hovers or keys meanwhile
 //     (AsukaModalBlocker), and Escape or its close button dismisses it.
+//     One as tall as its content opens at its content's size, the least
+//     the user can size it to, and is laid out at its window's after.
 //   - An Alert is an NSAlert, shown as a sheet.
 //
 // Screens and sheets are sized by the host, which reports each one's
@@ -72,9 +74,10 @@ let asukaSheetMargin: CGFloat = 80
     var full = false // a Sheet's FullScreen: as big as its window's content
     /// A Sheet's Movable: a modal window over its window, not a sheet of it.
     var movable = false
-    /// A movable sheet the user has resized: the user's size stays, its
-    /// content no longer fitting it.
-    var userSized = false
+    /// A movable sheet as tall as its content has its first size: from
+    /// then on its window's size is its own (the user's), which the core
+    /// lays its content out at.
+    var fitted = false
     /// A movable sheet's window's observers (its resizes), and the window
     /// it blocks.
     var watching: [NSObjectProtocol] = []
@@ -626,14 +629,11 @@ final class AsukaModalBlocker: NSView {
         n.kind == .sheet && (n.nav?.movable ?? false) && !(n.nav?.full ?? false)
     }
 
-    /// Follows a movable sheet's window: the user resizing it keeps the
-    /// user's size; each resize lays it out again.
+    /// Follows a movable sheet's window: each resize (the user's) lays it
+    /// out again.
     func watchMovable(_ n: AsukaNode, _ w: NSWindow) {
         guard let nav = n.nav else { return }
         let c = NotificationCenter.default
-        nav.watching.append(c.addObserver(forName: NSWindow.willStartLiveResizeNotification, object: w, queue: .main) { [weak n] _ in
-            MainActor.assumeIsolated { n?.nav?.userSized = true }
-        })
         nav.watching.append(c.addObserver(forName: NSWindow.didResizeNotification, object: w, queue: .main) { _ in
             MainActor.assumeIsolated { AsukaRuntime.shared.layoutNav() }
         })
@@ -704,7 +704,7 @@ final class AsukaModalBlocker: NSView {
     /// room exactly, as one that can be narrower does.
     func fitSheet(_ n: AsukaNode, _ width: Float, _ height: Float) {
         guard let nav = n.nav, let w = nav.window else { return }
-        if width > 0 && height > 0 && !nav.userSized {
+        if width > 0 && height > 0 && !nav.fitted {
             let wide = CGFloat(width)
             // A movable sheet is a window of its own: its window needn't be
             // as wide.
@@ -720,6 +720,13 @@ final class AsukaModalBlocker: NSView {
             w.setContentSize(size)
             w.setFrameTopLeftPoint(top)
             n.view?.frame = CGRect(origin: .zero, size: size)
+            if isMovable(n) {
+                // Its content's size is the least the user sizes it to; from
+                // now on its size is its window's.
+                nav.fitted = true
+                w.contentMinSize = size
+                reportScreen(n, size)
+            }
         }
         // The first size shows it, once the batch that placed its content
         // is applied.
@@ -771,10 +778,9 @@ final class AsukaModalBlocker: NSView {
                 if nav.full { fitCover(n) }
                 let b = cv.bounds
                 n.view?.frame = b
-                if fitsContent(n), let over = onWin(n) {
-                    // The room it has, which the core fits it in: a movable
-                    // sheet the user has resized has the user's size.
-                    reportScreen(n, nav.userSized ? b.size : sheetRoom(n, over))
+                if fitsContent(n), !nav.fitted, let over = onWin(n) {
+                    // The room it has, which the core fits it in.
+                    reportScreen(n, sheetRoom(n, over))
                     continue
                 }
                 reportScreen(n, b.size)
@@ -1314,6 +1320,7 @@ final class AsukaModalBlocker: NSView {
                                     "content": asukaRectJSON(w.contentView?.bounds ?? .zero), "frame": asukaRectJSON(w.frame),
                                     "isSheet": w.sheetParent != nil, "parent": w.sheetParent?.title ?? "",
                                     "childOf": w.parent?.title ?? "", "key": w.isKeyWindow, "alertPanel": w.animationBehavior == .alertPanel,
+                                    "minSize": [Double(w.contentMinSize.width), Double(w.contentMinSize.height)],
                                     "blocks": nav.blocking.map { blockingSheet($0) === w } ?? false] as [String: Any]
                 if let over = onWin(n) {
                     let r = sheetRoom(n, over)

@@ -115,6 +115,7 @@ ak_view *ak_sheet_present(ak_ui_root *r, ak_owner *owner, ak_closure *build, ak_
 	// (the web's), so its own first one settles it (ak_prov_report).
 	pv->fit_wait = !full && (detents & 4);
 	pv->fit_sheet = pv->fit_wait && ak_fit_sheet_platform(r->env.platform);
+	pv->fit_once = pv->fit_wait && movable;
 	ak_prov_attach(e, pv);
 	ak_release(pv);
 	e->up = up;

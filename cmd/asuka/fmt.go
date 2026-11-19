@@ -17,23 +17,24 @@ import (
 // gofmt does Go's: the files and directories named (a directory's .asuka
 // files, its subdirectories' too), or standard input without any.
 func cmdFmt(args []string) error {
-	var write, list bool
+	var write, list, indented bool
 	fs := newFlagSet("fmt", "[paths...]")
 	fs.about = "Formats Asuka source: each file named, every .asuka file in each directory named (and in\n" +
 		"their subdirectories), or standard input when none is. Prints the result unless -w or -l;\n" +
 		"a file with syntax errors is left as it is, its errors reported as file:line:col: message."
 	fs.Bool(&write, "write", 'w', "write the result to the file instead of printing it")
 	fs.Bool(&list, "list", 'l', "list the files whose formatting differs")
+	fs.Bool(&indented, "indented", 'i', "write blocks by indentation where they can be (rfcs/0018), braces where they can't")
 	if err := fs.parse(args); err != nil {
 		return err
 	}
-	return runFmt(fs.Args(), write, list, os.Stdin, os.Stdout, os.Stderr)
+	return runFmt(fs.Args(), write, list, indented, os.Stdin, os.Stdout, os.Stderr)
 }
 
 // errFmt says that some files had syntax errors, which runFmt printed.
 var errFmt = errors.New("fmt: some files have syntax errors")
 
-func runFmt(paths []string, write, list bool, stdin io.Reader, stdout, stderr io.Writer) error {
+func runFmt(paths []string, write, list, indented bool, stdin io.Reader, stdout, stderr io.Writer) error {
 	if len(paths) == 0 {
 		if write {
 			return errors.New("fmt: -w needs files to write: name them, or . for this directory")
@@ -42,7 +43,7 @@ func runFmt(paths []string, write, list bool, stdin io.Reader, stdout, stderr io
 		if err != nil {
 			return err
 		}
-		return fmtReport(formatSource("<standard input>", src, nil, false, list, stdout), stderr)
+		return fmtReport(formatSource("<standard input>", src, nil, false, list, indented, stdout), stderr)
 	}
 	failed := false
 	for _, path := range paths {
@@ -51,7 +52,7 @@ func runFmt(paths []string, write, list bool, stdin io.Reader, stdout, stderr io
 			return err
 		}
 		if !info.IsDir() {
-			if err := fmtReport(formatFile(path, info.Mode(), write, list, stdout), stderr); errors.Is(err, errFmt) {
+			if err := fmtReport(formatFile(path, info.Mode(), write, list, indented, stdout), stderr); errors.Is(err, errFmt) {
 				failed = true
 			} else if err != nil {
 				return err
@@ -76,7 +77,7 @@ func runFmt(paths []string, write, list bool, stdin io.Reader, stdout, stderr io
 			if err != nil {
 				return err
 			}
-			if err := fmtReport(formatFile(p, info.Mode(), write, list, stdout), stderr); errors.Is(err, errFmt) {
+			if err := fmtReport(formatFile(p, info.Mode(), write, list, indented, stdout), stderr); errors.Is(err, errFmt) {
 				failed = true
 				return nil
 			} else {
@@ -106,14 +107,14 @@ func fmtReport(err error, stderr io.Writer) error {
 	return err
 }
 
-func formatFile(path string, mode fs.FileMode, write, list bool, stdout io.Writer) error {
+func formatFile(path string, mode fs.FileMode, write, list, indented bool, stdout io.Writer) error {
 	src, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 	return formatSource(path, src, func(out []byte) error {
 		return writeKeeping(path, src, out, mode.Perm())
-	}, write, list, stdout)
+	}, write, list, indented, stdout)
 }
 
 // writeKeeping writes out over path, whose contents were src, as gofmt
@@ -166,8 +167,12 @@ func backup(path string, src []byte, perm fs.FileMode) (string, error) {
 // formatSource formats one file's source: lists its name if it changes
 // and list is set, writes it back with save if write is set, prints it
 // otherwise.
-func formatSource(name string, src []byte, save func([]byte) error, write, list bool, stdout io.Writer) error {
-	out, err := syntax.Format(name, src)
+func formatSource(name string, src []byte, save func([]byte) error, write, list, indented bool, stdout io.Writer) error {
+	format := syntax.Format
+	if indented {
+		format = syntax.FormatIndented
+	}
+	out, err := format(name, src)
 	if err != nil {
 		return err
 	}

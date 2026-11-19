@@ -38,7 +38,7 @@ func TestFmt(t *testing.T) {
 
 	// -l lists what would change and reports the syntax errors.
 	var out, errOut bytes.Buffer
-	err := runFmt([]string{dir}, false, true, nil, &out, &errOut)
+	err := runFmt([]string{dir}, false, true, false, nil, &out, &errOut)
 	if !errors.Is(err, errFmt) {
 		t.Errorf("-l: %v, want errFmt", err)
 	}
@@ -52,7 +52,7 @@ func TestFmt(t *testing.T) {
 
 	// Printing a file.
 	out.Reset()
-	if err := runFmt([]string{filepath.Join(dir, "a.asuka")}, false, false, nil, &out, &errOut); err != nil {
+	if err := runFmt([]string{filepath.Join(dir, "a.asuka")}, false, false, false, nil, &out, &errOut); err != nil {
 		t.Fatal(err)
 	}
 	if out.String() != clean || read("a.asuka") != messy {
@@ -61,7 +61,7 @@ func TestFmt(t *testing.T) {
 
 	// -w writes the files that change, and only those.
 	out.Reset()
-	runFmt([]string{dir}, true, false, nil, &out, &errOut)
+	runFmt([]string{dir}, true, false, false, nil, &out, &errOut)
 	if read("a.asuka") != clean || read("sub/b.asuka") != clean || read("sub/bad.asuka") != bad ||
 		read(".hidden/c.asuka") != messy || read("node_modules/d.asuka") != messy || read("sub/notes.txt") != messy {
 		t.Errorf("-w wrote the wrong files")
@@ -78,7 +78,7 @@ func TestFmt(t *testing.T) {
 	if err := os.Symlink("real.asuka", filepath.Join(dir, "link.asuka")); err != nil {
 		t.Fatal(err)
 	}
-	if err := runFmt([]string{filepath.Join(dir, "link.asuka")}, true, false, nil, &out, &errOut); err != nil {
+	if err := runFmt([]string{filepath.Join(dir, "link.asuka")}, true, false, false, nil, &out, &errOut); err != nil {
 		t.Fatal(err)
 	}
 	if fi, err := os.Lstat(filepath.Join(dir, "link.asuka")); err != nil || fi.Mode()&fs.ModeSymlink == 0 {
@@ -96,10 +96,25 @@ func TestFmt(t *testing.T) {
 
 	// Standard input.
 	out.Reset()
-	if err := runFmt(nil, false, false, strings.NewReader(messy), &out, &errOut); err != nil || out.String() != clean {
+	if err := runFmt(nil, false, false, false, strings.NewReader(messy), &out, &errOut); err != nil || out.String() != clean {
 		t.Errorf("stdin: %q, %v", out.String(), err)
 	}
-	if err := runFmt(nil, true, false, strings.NewReader(messy), &out, &errOut); err == nil {
+	if err := runFmt(nil, true, false, false, strings.NewReader(messy), &out, &errOut); err == nil {
 		t.Errorf("-w with standard input")
+	}
+}
+
+// asuka fmt --indented writes blocks by indentation, and the result is
+// the same program: formatted again without it, the braced form.
+func TestFmtIndented(t *testing.T) {
+	src := "component A {\n  Column {\n    if true {\n      Text(\"a\")\n    } else {\n      Text(\"b\")\n    }\n  }\n}\n"
+	want := "component A\n  Column\n    if true\n      Text(\"a\")\n    else\n      Text(\"b\")\n"
+	var out, errOut bytes.Buffer
+	if err := runFmt(nil, false, false, true, strings.NewReader(src), &out, &errOut); err != nil || out.String() != want {
+		t.Fatalf("fmt --indented: %v %s\n%q\nwant\n%q", err, errOut.String(), out.String(), want)
+	}
+	var back bytes.Buffer
+	if err := runFmt(nil, false, false, false, strings.NewReader(out.String()), &back, &errOut); err != nil || back.String() != src {
+		t.Fatalf("fmt of the indented form: %v %s\n%q\nwant\n%q", err, errOut.String(), back.String(), src)
 	}
 }

@@ -129,3 +129,53 @@ func TestIndentedRepository(t *testing.T) {
 	}
 	t.Logf("%d files, %d lines, %d lines that only closed a block taken out", files, total, removed)
 }
+
+// asuka fmt's indented form of every example, std and sdk file is the
+// same program (formatted with braces again it's the braced form), and
+// formatting it again changes nothing.
+func TestFormatIndentedRepository(t *testing.T) {
+	root := filepath.Join("..", "..")
+	files, braced, indented := 0, 0, 0
+	for _, dir := range []string{"examples", "std", "sdk"} {
+		filepath.WalkDir(filepath.Join(root, dir), func(path string, d os.DirEntry, err error) error {
+			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".asuka") || strings.Contains(path, "testdata") {
+				return nil
+			}
+			src, err := os.ReadFile(path)
+			if err != nil {
+				return nil
+			}
+			want, err := Format(path, src)
+			if err != nil {
+				return nil // not this test's to judge
+			}
+			ind, err := FormatIndented(path, src)
+			if err != nil {
+				t.Errorf("%s: FormatIndented: %v", path, err)
+				return nil
+			}
+			back, err := Format(path, ind)
+			if err != nil {
+				t.Errorf("%s: its indented form doesn't parse: %v\n%s", path, err, ind)
+				return nil
+			}
+			if string(back) != string(want) {
+				t.Errorf("%s: its indented form is a different program:\n%s", path, firstDiff(string(back), string(want)))
+				return nil
+			}
+			again, err := FormatIndented(path, ind)
+			if err != nil || string(again) != string(ind) {
+				t.Errorf("%s: formatting the indented form again changes it:\n%s", path, firstDiff(string(again), string(ind)))
+				return nil
+			}
+			files++
+			braced += strings.Count(string(want), "\n")
+			indented += strings.Count(string(ind), "\n")
+			return nil
+		})
+	}
+	if files < 150 {
+		t.Fatalf("only %d files checked", files)
+	}
+	t.Logf("%d files: %d lines braced, %d indented (%d fewer)", files, braced, indented, braced-indented)
+}

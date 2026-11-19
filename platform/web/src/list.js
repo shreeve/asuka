@@ -484,8 +484,10 @@ class List {
         }
         rv.pinned = true;
       }
+      // Placed by top, not a transform: a browser can draw a row moved by
+      // a part of a point a device pixel off, over the row under it.
       const s = rv.el.style;
-      s.transform = `translateY(${y}px)`;
+      s.top = y + "px";
       s.left = x + "px";
       s.width = w + "px";
       s.height = height + "px";

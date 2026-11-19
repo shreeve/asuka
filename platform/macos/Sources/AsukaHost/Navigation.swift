@@ -9,7 +9,11 @@
 //     FullScreen one is as big as all of its window's content under the
 //     title bar and toolbar, and follows the window as it resizes: a Mac
 //     has no full-screen modal of its own, and a sheet is how AppKit takes
-//     a window for a task; so does Escape.
+//     a window for a task; so does Escape. A Movable one is a window of its
+//     own the user can move and resize, a child of its window centered
+//     over it, popping in from its center as an alert panel does; its
+//     window takes no presses, scrolls, hovers or keys meanwhile
+//     (AsukaModalBlocker), and Escape or its close button dismisses it.
 //   - An Alert is an NSAlert, shown as a sheet.
 //
 // Screens and sheets are sized by the host, which reports each one's
@@ -58,6 +62,15 @@ import AsukaOps
     var on: UInt32 = 0
     var deferred = false // presenting waits for its window to open
     var full = false // a Sheet's FullScreen: as big as its window's content
+    /// A Sheet's Movable: a modal window over its window, not a sheet of it.
+    var movable = false
+    /// A movable sheet the user has resized: the user's size stays, its
+    /// content no longer fitting it.
+    var userSized = false
+    /// A movable sheet's window's observers (its resizes), and the window
+    /// it blocks.
+    var watching: [NSObjectProtocol] = []
+    weak var blocking: NSWindow?
     var detents: Int64 = 0
     /// Shows a sheet as tall as its content once the core has sized it
     /// (fitSheet): before, it would slide in at its room's size.
@@ -116,12 +129,38 @@ final class AsukaTabViewItem: NSTabViewItem {
 }
 
 /// A sheet's window: Escape dismisses it, past what its content does with
-/// it.
+/// it; so does a movable one's close button (and ⌘W).
 final class AsukaSheetWindow: NSWindow {
     override func cancelOperation(_ sender: Any?) {
         guard let v = contentView else { return }
         MainActor.assumeIsolated { AsukaRuntime.shared.cancel(v) }
     }
+    override func performClose(_ sender: Any?) { cancelOperation(sender) }
+}
+
+/// What covers a window's content while a movable sheet over it shows, as
+/// a modal window takes the window it's over: it takes the presses and
+/// scrolls there, a press bringing the sheet forward. Hovers are kept from
+/// the window's views by behindModal, keys by the sheet keeping the focus.
+final class AsukaModalBlocker: NSView {
+    weak var sheet: NSWindow?
+    override func hitTest(_ point: NSPoint) -> NSView? { frame.contains(point) ? self : nil }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func mouseDown(with event: NSEvent) {
+        NSSound.beep()
+        sheet?.makeKeyAndOrderFront(nil)
+    }
+    override func rightMouseDown(with event: NSEvent) { mouseDown(with: event) }
+    override func otherMouseDown(with event: NSEvent) {}
+    override func mouseUp(with event: NSEvent) {}
+    override func rightMouseUp(with event: NSEvent) {}
+    override func otherMouseUp(with event: NSEvent) {}
+    override func mouseDragged(with event: NSEvent) {}
+    override func rightMouseDragged(with event: NSEvent) {}
+    override func scrollWheel(with event: NSEvent) {}
+    override func magnify(with event: NSEvent) {}
+    override func menu(for event: NSEvent) -> NSMenu? { nil }
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .arrow) }
 }
 
 /// The delegate and target of navigation's AppKit objects (tab views,
@@ -133,6 +172,8 @@ final class AsukaSheetWindow: NSWindow {
 
     /// An updateWindowChrome waits for the core to return.
     var chromeQueued = false
+    /// The covers over each window that movable sheets block, by window.
+    var blockers: [ObjectIdentifier: [AsukaModalBlocker]] = [:]
     /// A windowsChanged waits for the core to return.
     var winQueued = false
     /// The text fields of the alerts showing: their node and index.
@@ -337,6 +378,10 @@ final class AsukaSheetWindow: NSWindow {
             n.dying = true
             if let w = nav.window {
                 if let p = w.sheetParent { p.endSheet(w) }
+                if let p = w.parent { p.removeChildWindow(w) }
+                if let b = nav.blocking { unblockWindow(b, w) }
+                for o in nav.watching { NotificationCenter.default.removeObserver(o) }
+                nav.watching = []
                 w.orderOut(nil)
                 if let c = w.contentView { byView.removeValue(forKey: ObjectIdentifier(c)) }
                 nav.window = nil
@@ -476,11 +521,86 @@ final class AsukaSheetWindow: NSWindow {
         n.kind == .sheet && (n.nav?.detents ?? 0) & 4 != 0 && !(n.nav?.full ?? false)
     }
 
+    /// Whether n is a movable sheet: a window of its own over its window.
+    func isMovable(_ n: AsukaNode) -> Bool {
+        n.kind == .sheet && (n.nav?.movable ?? false) && !(n.nav?.full ?? false)
+    }
+
+    /// Follows a movable sheet's window: the user resizing it keeps the
+    /// user's size; each resize lays it out again.
+    func watchMovable(_ n: AsukaNode, _ w: NSWindow) {
+        guard let nav = n.nav else { return }
+        let c = NotificationCenter.default
+        nav.watching.append(c.addObserver(forName: NSWindow.willStartLiveResizeNotification, object: w, queue: .main) { [weak n] _ in
+            MainActor.assumeIsolated { n?.nav?.userSized = true }
+        })
+        nav.watching.append(c.addObserver(forName: NSWindow.didResizeNotification, object: w, queue: .main) { _ in
+            MainActor.assumeIsolated { AsukaRuntime.shared.layoutNav() }
+        })
+    }
+
+    /// Shows a movable sheet: centered over its window (on its screen),
+    /// in front of it as its child, its window blocked.
+    func showMovable(_ n: AsukaNode, _ w: NSWindow, _ over: AsukaWin) {
+        let p = over.window.frame
+        let s = w.frame.size
+        var o = CGPoint(x: (p.midX - s.width / 2).rounded(), y: (p.midY - s.height / 2).rounded())
+        if let vf = (over.window.screen ?? NSScreen.main)?.visibleFrame {
+            o.x = min(max(o.x, vf.minX), max(vf.maxX - s.width, vf.minX))
+            o.y = min(max(o.y, vf.minY), max(vf.maxY - s.height, vf.minY))
+        }
+        w.setFrameOrigin(o)
+        w.makeKeyAndOrderFront(nil)
+        over.window.addChildWindow(w, ordered: .above)
+        blockWindow(over, w)
+        n.nav?.blocking = over.window
+    }
+
+    /// Covers over's content while the movable sheet w shows over it, and
+    /// disables its close button.
+    func blockWindow(_ over: AsukaWin, _ w: NSWindow) {
+        let b = AsukaModalBlocker(frame: over.content.bounds)
+        b.autoresizingMask = [.width, .height]
+        b.sheet = w
+        over.content.addSubview(b)
+        navTarget.blockers[ObjectIdentifier(over.window), default: []].append(b)
+        over.window.standardWindowButton(.closeButton)?.isEnabled = false
+        // What the pointer was over there is no longer hovered.
+        for x in nodes.values where x.view?.window === over.window && (x.interaction?.hovered ?? false) { setHover(x, false) }
+    }
+
+    /// Takes the cover w put over window away; the window's close button
+    /// comes back once no movable sheet blocks it.
+    func unblockWindow(_ window: NSWindow, _ w: NSWindow) {
+        let key = ObjectIdentifier(window)
+        var list = navTarget.blockers[key] ?? []
+        list.removeAll { b in
+            guard b.sheet === w || b.sheet == nil else { return false }
+            b.removeFromSuperview()
+            return true
+        }
+        navTarget.blockers[key] = list.isEmpty ? nil : list
+        if list.isEmpty { window.standardWindowButton(.closeButton)?.isEnabled = true }
+    }
+
+    /// The movable sheet blocking window, the last shown, if one does.
+    func blockingSheet(_ window: NSWindow) -> NSWindow? { navTarget.blockers[ObjectIdentifier(window)]?.last?.sheet }
+
+    /// Keeps each window's covers over everything else in its content.
+    func raiseBlockers() {
+        for list in navTarget.blockers.values {
+            for b in list {
+                guard let host = b.superview, host.subviews.last !== b else { continue }
+                host.addSubview(b, positioned: .above, relativeTo: nil)
+            }
+        }
+    }
+
     /// Sizes a sheet as tall as its content to the size the core laid it
     /// out at, its top edge kept.
     func fitSheet(_ n: AsukaNode, _ width: Float, _ height: Float) {
         guard let nav = n.nav, let w = nav.window else { return }
-        if width > 0 && height > 0 {
+        if width > 0 && height > 0 && !nav.userSized {
             let f = w.frame
             let top = CGPoint(x: f.minX, y: f.maxY)
             let size = CGSize(width: CGFloat(width), height: CGFloat(height))
@@ -508,8 +628,9 @@ final class AsukaSheetWindow: NSWindow {
                 let b = cv.bounds
                 n.view?.frame = b
                 if fitsContent(n), let over = onWin(n) {
-                    // The room it has, which the core fits it in.
-                    reportScreen(n, sheetRoom(n, over))
+                    // The room it has, which the core fits it in: a movable
+                    // sheet the user has resized has the user's size.
+                    reportScreen(n, nav.userSized ? b.size : sheetRoom(n, over))
                     continue
                 }
                 reportScreen(n, b.size)
@@ -590,6 +711,7 @@ final class AsukaSheetWindow: NSWindow {
             case AsukaProp.Sheet.detents: nav.detents = v.int
             case AsukaProp.Sheet.window: nav.on = UInt32(truncatingIfNeeded: v.int)
             case AsukaProp.Sheet.fullScreen: nav.full = v.int != 0 || v.bool
+            case AsukaProp.Sheet.movable: nav.movable = v.int != 0 || v.bool
             default: break
             }
         case .popover:
@@ -692,8 +814,15 @@ final class AsukaSheetWindow: NSWindow {
             size = coverSize(over.window)
             style = [.titled]
         }
+        let movable = isMovable(n)
+        if movable { style = [.titled, .closable, .resizable] }
         let w = AsukaSheetWindow(contentRect: CGRect(origin: .zero, size: size), styleMask: style, backing: .buffered, defer: false)
         w.isReleasedWhenClosed = false
+        if movable {
+            w.animationBehavior = .alertPanel
+            w.contentMinSize = CGSize(width: 240, height: 120)
+            watchMovable(n, w)
+        }
         let content = AsukaView(frame: CGRect(origin: .zero, size: size))
         content.autoresizesSubviews = false
         w.contentView = content
@@ -708,7 +837,7 @@ final class AsukaSheetWindow: NSWindow {
         // field's focus ring at its corner.
         let begin: () -> Void = { [weak self] in
             guard let self, self.alive(n), !n.dying, n.nav?.window === w else { return }
-            over.window.beginSheet(w, completionHandler: nil)
+            if movable { self.showMovable(n, w, over) } else { over.window.beginSheet(w, completionHandler: nil) }
         }
         if fitsContent(n) {
             // It shows at its content's size: the core's first Fit, for the
@@ -970,7 +1099,9 @@ final class AsukaSheetWindow: NSWindow {
             if let w = nav.window {
                 d["sheetWindow"] = ["visible": w.isVisible, "styleMask": w.styleMask.rawValue,
                                     "content": asukaRectJSON(w.contentView?.bounds ?? .zero), "frame": asukaRectJSON(w.frame),
-                                    "isSheet": w.sheetParent != nil, "parent": w.sheetParent?.title ?? ""] as [String: Any]
+                                    "isSheet": w.sheetParent != nil, "parent": w.sheetParent?.title ?? "",
+                                    "childOf": w.parent?.title ?? "", "key": w.isKeyWindow, "alertPanel": w.animationBehavior == .alertPanel,
+                                    "blocks": nav.blocking.map { blockingSheet($0) === w } ?? false] as [String: Any]
                 if let over = onWin(n) {
                     let r = sheetRoom(n, over)
                     d["sheetRoom"] = [Double(r.width), Double(r.height)]
@@ -1160,12 +1291,28 @@ final class AsukaSheetWindow: NSWindow {
             return ""
         case "cancel":
             guard let w = window(arg) else { return "no window \(arg)" }
-            let target = w.attachedSheet ?? w
+            let target = w.attachedSheet ?? blockingSheet(w) ?? w
             guard let c = target.contentView else { return "no content" }
             cancel(c)
             return ""
         case "dismiss":
             return dismissPopover() ? "" : "no popover shows"
+        case "sheetclose", "sheetresize":
+            // A movable sheet's close button, or the user resizing it
+            // (sheetresize:<width>,<height>, its content's size).
+            guard let w = nodes.values.first(where: { isMovable($0) && ($0.nav?.window?.isVisible ?? false) })?.nav?.window else {
+                return "no movable sheet shows"
+            }
+            if verb == "sheetclose" {
+                w.performClose(nil)
+                return ""
+            }
+            let wh = arg.split(separator: ",")
+            guard wh.count == 2, let x = Double(wh[0]), let y = Double(wh[1]) else { return "want sheetresize:<width>,<height>" }
+            NotificationCenter.default.post(name: NSWindow.willStartLiveResizeNotification, object: w)
+            w.setContentSize(CGSize(width: x, height: y))
+            NotificationCenter.default.post(name: NSWindow.didEndLiveResizeNotification, object: w)
+            return ""
         case "search":
             return typeSearch(arg) ? "" : "no search field shows"
         case "searchsubmit":

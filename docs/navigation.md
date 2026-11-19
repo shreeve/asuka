@@ -622,6 +622,36 @@ component Notes {
 - Its content is built when it opens and disposed when it closes, so
   state made in it starts fresh each time.
 
+### Movable sheets
+
+`movable: true` makes a sheet on a desktop a dialog the user can move
+and resize, as a desktop's modal dialogs are, rather than a sheet
+attached to the window: for a detail or a form the user wants to look at
+beside what's under it, or larger. It's as modal as a sheet: what's
+behind it takes no input until it closes, and Escape dismisses it, as
+does its own close button; a click outside it doesn't. `detents` gives
+its size as it opens (`.fit`: its content's height), centered over its
+window; once the user resizes it, the user's size stays, and its content
+follows it.
+
+```asuka
+Sheet {
+  bind open: showing
+  detents: [.fit]
+  movable: true
+  ReportText(report)
+}
+```
+
+| | A movable sheet |
+|---|---|
+| macOS | a window of its own, a child of its window, centered over it and popping in from its center as an alert does; its window takes no presses, scrolls or hovers meanwhile |
+| Windows | a modal window over the window in use, which a sheet already is |
+| The web | a card over a backdrop on a wide window, moved by a bar along its top (with its close button) and resized by its corner, as a Window's panel |
+| iOS, Android, Linux | a sheet as without it: a phone's sheet isn't moved, and libadwaita's dialogs aren't |
+
+A `fullScreen` sheet ignores it.
+
 ### Full-screen sheets
 
 `fullScreen: true` covers the whole screen instead, for a task that takes the

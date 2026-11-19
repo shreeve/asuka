@@ -615,8 +615,8 @@ static void apply_op(ak_fake *f, const ak_op *op) {
 		const ak_prop_info *info = ak_prop_of(v->kind, op->prop);
 		if (!info || info->type != op->value.type)
 			{ fail(f, "SetProp: %s has no %s prop %u", kind_str(v->kind, kb), op->value.type < AK_T_COUNT ? type_names[op->value.type] : "?", op->prop); return; }
-		if (v->kind == AK_KIND_SHEET && op->prop == AK_PROP_SHEET_FULL_SCREEN && v->presented)
-			{ fail(f, "SetProp: a sheet's FullScreen after its Present: a host presents it as it was"); return; }
+		if (v->kind == AK_KIND_SHEET && (op->prop == AK_PROP_SHEET_FULL_SCREEN || op->prop == AK_PROP_SHEET_MOVABLE) && v->presented)
+			{ fail(f, "SetProp: a sheet's %s after its Present: a host presents it as it was", op->prop == AK_PROP_SHEET_MOVABLE ? "Movable" : "FullScreen"); return; }
 		set_prop(v, op->prop, &op->value);
 		if (v->kind == AK_KIND_NATIVE && op->prop == AK_PROP_NATIVE_PROP) set_native(v, op->value.s);
 		if (v->kind == AK_KIND_OVERLAY && op->prop == AK_PROP_OVERLAY_ANCHOR) v->anchor_known = false;  // reported again

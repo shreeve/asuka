@@ -238,6 +238,7 @@ public enum AsukaProp {
         public static let window: UInt16 = 66
         public static let fullScreen: UInt16 = 67
         public static let routed: UInt16 = 68
+        public static let movable: UInt16 = 69
     }
 
     public enum Alert {

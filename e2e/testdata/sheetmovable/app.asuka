@@ -1,0 +1,34 @@
+// SheetMovable is a web e2e's app (e2e/sheet_movable_web_test.go): a
+// movable sheet, which the user moves by its bar and resizes by its
+// corner, its environment its content's size, and a counter on the page
+// behind it, which takes no press while it shows.
+
+component Root {
+  state open = false
+  state taps = 0
+
+  Column {
+    padding: 12
+    gap: 6
+    Text("status: ready")
+    Text("open {open} taps {taps}")
+    Button("Show") { on press { open = true } }
+    Button("Count") { on press { taps += 1 } }
+    Sheet {
+      bind open: open
+      movable: true
+      Column {
+        padding: 20
+        Text("sheet {environment().width}x{environment().height}")
+      }
+    }
+  }
+}
+
+app { Root() }
+
+test "it runs on the fake host" {
+  let app = mount(Root())
+  app.tap("Show")
+  app.expect("open true taps 0")
+}

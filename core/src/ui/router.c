@@ -1322,7 +1322,7 @@ static void present(router_t *rt, inst *in, entry *e, const edesc *d) {
 	ak_closure *c = ak_closure_new(sheet_content, NULL, 1, int_cap);
 	c->caps[0].i = (int64_t)(uintptr_t)&cc;
 	bool grabber = int_key(e->member->route, AK_KEY_ROUTE_GRABBER) != 0, full = int_key(e->member->route, AK_KEY_ROUTE_FULL_SCREEN) != 0;
-	ak_view *s = ak_sheet_present(rt->e->r, in->owner, c, NULL, 0, detents, grabber, full, true, dismissed, e);
+	ak_view *s = ak_sheet_present(rt->e->r, in->owner, c, NULL, 0, detents, grabber, full, false, true, dismissed, e);
 	ak_release(c);
 	e->sheet = ak_retain(s);
 	if (e->member->leaf) title_screen(s->kids.len ? s->kids.data[0] : NULL, e->member);

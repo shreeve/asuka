@@ -102,7 +102,7 @@ void ak_sheet_close(ak_view *e) {
 }
 
 ak_view *ak_sheet_present(ak_ui_root *r, ak_owner *owner, ak_closure *build, ak_val *args, uint32_t nargs, int64_t detents, bool grabber, bool full,
-                          bool routed, void (*dismissed)(void *ctx), void *ctx) {
+                          bool movable, bool routed, void (*dismissed)(void *ctx), void *ctx) {
 	ak_view *up = ak_alert_window(r);  // the window it's declared in
 	ak_view *e = ak_view_new(r, &cls_sheet_view, 0, true);
 	sheet_t *s = ak_alloc(sizeof *s);
@@ -122,6 +122,7 @@ ak_view *ak_sheet_present(ak_ui_root *r, ak_owner *owner, ak_closure *build, ak_
 	} else {
 		if (detents) ak_batch_set_int(b, e->id, AK_PROP_SHEET_DETENTS, detents);
 		if (grabber) ak_batch_set_bool(b, e->id, AK_PROP_SHEET_GRABBER, true);
+		if (movable) ak_batch_set_bool(b, e->id, AK_PROP_SHEET_MOVABLE, true);
 	}
 	if (routed) ak_batch_set_bool(b, e->id, AK_PROP_SHEET_ROUTED, true);
 	ak_view_listen(e, AK_EVENT_DISMISSED);
@@ -172,8 +173,10 @@ static void sheet_el_dismissed(void *ctx) {
 static void sheet_el_open(ak_view *e) {
 	sheet_el *s = e->impl;
 	if (s->shown || !s->build || e->dead || !e->finalized) return;
-	const ak_val *d = key_of(e, AK_KEY_SHEET_DETENTS), *g = key_of(e, AK_KEY_SHEET_GRABBER), *f = key_of(e, AK_KEY_SHEET_FULL_SCREEN);
-	ak_view *v = ak_sheet_present(e->r, e->owner, s->build, NULL, 0, d ? detents_bits(d->p) : 0, g && g->i, f && f->i, false, sheet_el_dismissed, e);
+	const ak_val *d = key_of(e, AK_KEY_SHEET_DETENTS), *g = key_of(e, AK_KEY_SHEET_GRABBER), *f = key_of(e, AK_KEY_SHEET_FULL_SCREEN),
+	             *m = key_of(e, AK_KEY_SHEET_MOVABLE);
+	ak_view *v = ak_sheet_present(e->r, e->owner, s->build, NULL, 0, d ? detents_bits(d->p) : 0, g && g->i, f && f->i, m && m->i, false,
+	                              sheet_el_dismissed, e);
 	s->shown = ak_retain(v);
 }
 
@@ -234,7 +237,7 @@ static void presented_cleanup(void *ctx) {
 void ak_ui_present(ak_closure *build) {
 	ak_ui_root *r = ak_ui_current();
 	ak_owner *o = ak_current_owner();
-	ak_view *e = ak_sheet_present(r, o, build, NULL, 0, 0, false, false, false, presented_dismissed, NULL);
+	ak_view *e = ak_sheet_present(r, o, build, NULL, 0, 0, false, false, false, false, presented_dismissed, NULL);
 	((sheet_t *)e->impl)->ctx = e;
 	ak_on_cleanup(presented_cleanup, ak_retain(e));
 }

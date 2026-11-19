@@ -102,7 +102,7 @@ void ak_sheet_close(ak_view *e) {
 }
 
 ak_view *ak_sheet_present(ak_ui_root *r, ak_owner *owner, ak_closure *build, ak_val *args, uint32_t nargs, int64_t detents, bool grabber, bool full,
-                          bool movable, bool routed, void (*dismissed)(void *ctx), void *ctx) {
+                          bool movable, bool resizable, bool routed, void (*dismissed)(void *ctx), void *ctx) {
 	ak_view *up = ak_alert_window(r);  // the window it's declared in
 	ak_view *e = ak_view_new(r, &cls_sheet_view, 0, true);
 	sheet_t *s = ak_alloc(sizeof *s);
@@ -115,7 +115,7 @@ ak_view *ak_sheet_present(ak_ui_root *r, ak_owner *owner, ak_closure *build, ak_
 	// (the web's), so its own first one settles it (ak_prov_report).
 	pv->fit_wait = !full && (detents & 4);
 	pv->fit_sheet = pv->fit_wait && ak_fit_sheet_platform(r->env.platform);
-	pv->fit_once = pv->fit_wait && movable;
+	pv->fit_once = pv->fit_wait && movable && resizable;
 	ak_prov_attach(e, pv);
 	ak_release(pv);
 	e->up = up;
@@ -127,6 +127,7 @@ ak_view *ak_sheet_present(ak_ui_root *r, ak_owner *owner, ak_closure *build, ak_
 		if (detents) ak_batch_set_int(b, e->id, AK_PROP_SHEET_DETENTS, detents);
 		if (grabber) ak_batch_set_bool(b, e->id, AK_PROP_SHEET_GRABBER, true);
 		if (movable) ak_batch_set_bool(b, e->id, AK_PROP_SHEET_MOVABLE, true);
+		if (movable && resizable) ak_batch_set_bool(b, e->id, AK_PROP_SHEET_RESIZABLE, true);
 	}
 	if (routed) ak_batch_set_bool(b, e->id, AK_PROP_SHEET_ROUTED, true);
 	ak_view_listen(e, AK_EVENT_DISMISSED);
@@ -178,8 +179,8 @@ static void sheet_el_open(ak_view *e) {
 	sheet_el *s = e->impl;
 	if (s->shown || !s->build || e->dead || !e->finalized) return;
 	const ak_val *d = key_of(e, AK_KEY_SHEET_DETENTS), *g = key_of(e, AK_KEY_SHEET_GRABBER), *f = key_of(e, AK_KEY_SHEET_FULL_SCREEN),
-	             *m = key_of(e, AK_KEY_SHEET_MOVABLE);
-	ak_view *v = ak_sheet_present(e->r, e->owner, s->build, NULL, 0, d ? detents_bits(d->p) : 0, g && g->i, f && f->i, m && m->i, false,
+	             *m = key_of(e, AK_KEY_SHEET_MOVABLE), *z = key_of(e, AK_KEY_SHEET_RESIZABLE);
+	ak_view *v = ak_sheet_present(e->r, e->owner, s->build, NULL, 0, d ? detents_bits(d->p) : 0, g && g->i, f && f->i, m && m->i, z && z->i, false,
 	                              sheet_el_dismissed, e);
 	s->shown = ak_retain(v);
 }
@@ -241,7 +242,7 @@ static void presented_cleanup(void *ctx) {
 void ak_ui_present(ak_closure *build) {
 	ak_ui_root *r = ak_ui_current();
 	ak_owner *o = ak_current_owner();
-	ak_view *e = ak_sheet_present(r, o, build, NULL, 0, 0, false, false, false, false, presented_dismissed, NULL);
+	ak_view *e = ak_sheet_present(r, o, build, NULL, 0, 0, false, false, false, false, false, presented_dismissed, NULL);
 	((sheet_t *)e->impl)->ctx = e;
 	ak_on_cleanup(presented_cleanup, ak_retain(e));
 }

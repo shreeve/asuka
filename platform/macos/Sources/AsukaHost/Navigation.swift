@@ -12,7 +12,7 @@
 //     title bar and toolbar, and follows the window as it resizes: a Mac
 //     has no full-screen modal of its own, and a sheet is how AppKit takes
 //     a window for a task; so does Escape. A Movable one is a window of its
-//     own the user can move and resize, centered over its window and in
+//     own the user can move (a Resizable one, resize), centered over its window and in
 //     front of it, fading in where it opens (120 ms; closing is at once); its
 //     window takes no presses, scrolls, hovers or keys meanwhile
 //     (AsukaModalBlocker), and Escape or its close button dismisses it.
@@ -77,6 +77,8 @@ let asukaSheetMargin: CGFloat = 80
     var full = false // a Sheet's FullScreen: as big as its window's content
     /// A Sheet's Movable: a modal window over its window, not a sheet of it.
     var movable = false
+    /// A Sheet's Resizable, with Movable: the user resizes its window too.
+    var resizable = false
     /// A movable sheet as tall as its content has its first size: from
     /// then on its window's size is its own (the user's), which the core
     /// lays its content out at.
@@ -739,9 +741,10 @@ final class AsukaModalBlocker: NSView {
             w.setContentSize(size)
             w.setFrameTopLeftPoint(top)
             n.view?.frame = CGRect(origin: .zero, size: size)
-            if isMovable(n) {
+            if isMovable(n) && nav.resizable {
                 // Its content's size is the least the user sizes it to; from
-                // now on its size is its window's.
+                // now on its size is its window's. One that isn't resizable
+                // follows its content, as any fit sheet.
                 nav.fitted = true
                 w.contentMinSize = size
                 reportScreen(n, size)
@@ -950,6 +953,7 @@ final class AsukaModalBlocker: NSView {
             case AsukaProp.Sheet.window: nav.on = UInt32(truncatingIfNeeded: v.int)
             case AsukaProp.Sheet.fullScreen: nav.full = v.int != 0 || v.bool
             case AsukaProp.Sheet.movable: nav.movable = v.int != 0 || v.bool
+            case AsukaProp.Sheet.resizable: nav.resizable = v.int != 0 || v.bool
             default: break
             }
         case .popover:
@@ -1055,8 +1059,9 @@ final class AsukaModalBlocker: NSView {
         let movable = isMovable(n)
         // A movable sheet has no title bar: its own header is its top, and
         // the user drags it by its background. Titled, it keeps a window's
-        // shadow, corners and resizing; closable, ⌘W closes it.
-        if movable { style = [.titled, .closable, .resizable, .fullSizeContentView] }
+        // shadow and corners; closable, ⌘W closes it; a resizable one the
+        // user resizes at its edges.
+        if movable { style = nav.resizable ? [.titled, .closable, .resizable, .fullSizeContentView] : [.titled, .closable, .fullSizeContentView] }
         let w = AsukaSheetWindow(contentRect: CGRect(origin: .zero, size: size), styleMask: style, backing: .buffered, defer: false)
         w.isReleasedWhenClosed = false
         if movable {
@@ -1065,7 +1070,7 @@ final class AsukaModalBlocker: NSView {
             w.titlebarAppearsTransparent = true
             for b in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] { w.standardWindowButton(b)?.isHidden = true }
             w.isMovableByWindowBackground = true
-            w.contentMinSize = CGSize(width: 240, height: 120)
+            if nav.resizable { w.contentMinSize = CGSize(width: 240, height: 120) }
             watchMovable(n, w)
         }
         let content = AsukaView(frame: CGRect(origin: .zero, size: size))

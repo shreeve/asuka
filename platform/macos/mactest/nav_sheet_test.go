@@ -545,11 +545,11 @@ func TestNavZoomFrom(t *testing.T) {
 // A movable sheet is a window of its own, not a sheet, nor a child window
 // (which the window server doesn't drag smoothly): centered over its
 // window and in front of it, the key window, faded in where it opens (no
-// zoom or bounce of AppKit's own), which the user can move and resize. Its window takes no presses
-// meanwhile. A fit one opens at its content's size, the least the user
-// can size it to; after that its size is its window's, which its content
-// is laid out at, whatever the content does. Escape and its close button
-// dismiss it.
+// zoom or bounce of AppKit's own), which the user can move, and resize
+// when it's resizable. Its window takes no presses meanwhile. A fit one
+// opens at its content's size, the least the user can size it to; after
+// that its size is its window's, which its content is laid out at,
+// whatever the content does. Escape and its close button dismiss it.
 func TestNavMovableSheet(t *testing.T) {
 	a := Run(t, `
 		app { Root() }
@@ -566,6 +566,7 @@ func TestNavMovableSheet(t *testing.T) {
 		      bind open: open
 		      detents: [.fit]
 		      movable: true
+		      resizable: true
 		      Column {
 		        padding: 20
 		        View { height: 100; background: .blue }
@@ -688,6 +689,65 @@ func TestNavMovableSheet(t *testing.T) {
 }
 
 // appActive is whether the player is the active app.
+
+// A movable sheet that isn't resizable, as a desktop's dialogs aren't:
+// its window has no resizing, but is still closable (⌘W) and dragged by
+// its background, without a title bar; a fit one follows its content, as
+// any fit sheet.
+func TestNavMovableSheetFixedSize(t *testing.T) {
+	a := Run(t, `
+		app { Root() }
+		component Root {
+		  state open = false
+		  state more = false
+		  Column {
+		    padding: 20
+		    Text("open {open}")
+		    Button("Show") { on press { open = true } }
+		    Sheet {
+		      bind open: open
+		      detents: [.fit]
+		      movable: true
+		      Column {
+		        padding: 20
+		        View { height: 100; background: .blue }
+		        if more { View { height: 50; background: .green } }
+		        Button("More") { on press { more = !more } }
+		        Text("fixed sheet")
+		      }
+		    }
+		  }
+		}
+	`)
+	a.UntilText("open false")
+	a.Do("tap Show")
+	tr := a.Until(func(tr *Tree) bool {
+		s := sheetOf(tr)
+		return s != nil && sheetWindow(s)["visible"] == true
+	})
+	w := sheetWindow(sheetOf(tr))
+	m := int(w["styleMask"].(float64))
+	if m&styleResizable != 0 {
+		t.Fatalf("style mask %#x: a movable sheet the user resizes without resizable", m)
+	}
+	if m&styleClosable == 0 || m&styleFullSizeContent == 0 {
+		t.Fatalf("style mask %#x: not closable, or its content under a title bar", m)
+	}
+	if w["byBackground"] != true {
+		t.Fatal("not movable by its background")
+	}
+	// Its content grows: so does it.
+	_, h0 := frameSize(sheetOf(tr))
+	a.Do("tap More")
+	a.Until(func(tr *Tree) bool {
+		s := sheetOf(tr)
+		if s == nil {
+			return false
+		}
+		_, h := frameSize(s)
+		return h == h0+50
+	})
+}
 func appActive(tr *Tree) bool {
 	var d struct {
 		App struct {

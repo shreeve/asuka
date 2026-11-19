@@ -186,8 +186,9 @@ func frameSize(n *Node) (float64, float64) {
 	return n.Frame[2], n.Frame[3]
 }
 
-// A movable sheet is a window of its own, not a sheet: a child of its
-// window, centered over it, the key window, popping in as an alert panel
+// A movable sheet is a window of its own, not a sheet, nor a child window
+// (which the window server doesn't drag smoothly): centered over its
+// window and in front of it, the key window, popping in as an alert panel
 // does, which the user can move and resize. Its window takes no presses
 // meanwhile. A fit one opens at its content's size, the least the user
 // can size it to; after that its size is its window's, which its content
@@ -237,13 +238,16 @@ func TestNavMovableSheet(t *testing.T) {
 	// test's player while the user works in another app).
 	keyed := func(w map[string]any) bool { return w["key"] == true || !appActive(a.Tree()) }
 	tr := shown("opened", func(w map[string]any, s *Node) bool {
-		return w["childOf"] != "" && keyed(w) && w["alertPanel"] == true && w["blocks"] == true
+		return w["over"] != "" && keyed(w) && w["alertPanel"] == true && w["blocks"] == true
 	})
 	main := tr.Main()
 	s := sheetOf(tr)
 	w := sheetWindow(s)
-	if p := w["childOf"]; p != tr.Main().Title {
-		t.Fatalf("a child of %q, not of the main window %q", p, tr.Main().Title)
+	if p := w["over"]; p != tr.Main().Title {
+		t.Fatalf("over %q, not the main window %q", p, tr.Main().Title)
+	}
+	if p := w["childOf"]; p != "" {
+		t.Fatalf("a child window of %q: the window server doesn't drag it smoothly", p)
 	}
 	if m := int(w["styleMask"].(float64)); m&styleResizable == 0 || m&styleClosable == 0 {
 		t.Fatalf("style mask %#x: a movable sheet the user can't resize or close", m)

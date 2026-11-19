@@ -442,6 +442,7 @@ var Elements = []Element{
 		{Name: "fullScreen", Type: "bool", Doc: "covers the screen; the user can't swipe it away"},
 		{Name: "movable", Type: "bool", Doc: "on a desktop, a dialog the user can move (a Mac's modal window, the web's panel) rather than a sheet attached to the window; phones ignore it"},
 		{Name: "resizable", Type: "bool", Doc: "with movable, the user can also resize it; a movable sheet isn't resizable without it, as a desktop's dialogs aren't"},
+		{Name: "dismissOutside", Type: "bool", Doc: "with movable, a press outside it dismisses it, as Escape does; a movable sheet takes no press outside without it"},
 	}, Events: []Event{
 		{Name: "change", Params: []Param{{"open", "bool"}}},
 		{Name: "dismiss", Doc: "the user dismissed it"},

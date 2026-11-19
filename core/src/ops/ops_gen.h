@@ -365,6 +365,8 @@ enum {
 	AK_PROP_SHEET_MOVABLE = 69,
 	// with Movable, a dialog the user can also resize, sent before Present: a Mac's window resizable at its edges, the web's card resized by its corner. A movable sheet isn't resizable without it, as a desktop's dialogs aren't
 	AK_PROP_SHEET_RESIZABLE = 70,
+	// with Movable, a press outside the dialog dismisses it as Escape does, sent before Present: a Mac's on the window it's over, the web's on its backdrop. Without it a movable sheet takes no press outside (a Mac's beeps)
+	AK_PROP_SHEET_DISMISS_OUTSIDE = 71,
 };
 
 // Alert props.

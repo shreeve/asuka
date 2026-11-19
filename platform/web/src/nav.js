@@ -86,8 +86,9 @@ function iconButton(symbol, label, rtl) {
 }
 
 /**
- * onBackdropPress calls f for a press on dialog d's backdrop (d itself,
- * around its content): a click there whose press began there too. A tap
+ * onBackdropPress calls f, with the click, for a press on dialog d's
+ * backdrop (d itself, around its content): a click there whose press began
+ * there too. A tap
  * that opens a dialog as it ends (Press is the pointerup's) is followed in
  * iOS Safari by its click, hit-tested at the finger once the dialog shows:
  * on the backdrop, though the press began on what opened it.
@@ -98,7 +99,7 @@ function onBackdropPress(d, f) {
   d.addEventListener("click", (e) => {
     const pressed = down;
     down = false;
-    if (e.target === d && pressed) f();
+    if (e.target === d && pressed) f(e);
   });
 }
 
@@ -599,7 +600,17 @@ export class Navigation {
     n.shown = true;
     this.dialogs.push(n);
     d.addEventListener("cancel", (e) => { e.preventDefault(); this.dismiss(n); });
-    onBackdropPress(d, () => { if (!n.fullScreen && !n.mv) this.dismiss(n); });
+    // A press on its backdrop dismisses it; a movable one's only with
+    // DismissOutside, and only outside its card.
+    onBackdropPress(d, (e) => {
+      if (n.fullScreen) return;
+      if (n.mv) {
+        const r = d.getBoundingClientRect();
+        const out = e.clientX < r.left || e.clientX >= r.right || e.clientY < r.top || e.clientY >= r.bottom;
+        if (!n.dismissOutside || !out) return;
+      }
+      this.dismiss(n);
+    });
     d.showModal();
     this.sizeDialog(n);
     const wide = this.wide() && !n.fullScreen;
@@ -1842,6 +1853,7 @@ const sheet = {
     if (p === P.Sheet.FullScreen) n.fullScreen = !!v; // before Present
     if (p === P.Sheet.Movable) n.movable = !!v; // before Present
     if (p === P.Sheet.Resizable) n.resizable = !!v; // before Present
+    if (p === P.Sheet.DismissOutside) n.dismissOutside = !!v; // before Present
     if (p === P.Sheet.Routed) n.routed = !!v; // a Router's: the history goes back from it
   },
   frame() { return true; },

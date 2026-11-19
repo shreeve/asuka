@@ -15,9 +15,11 @@ import (
 // its content all of it, and a resize corner; dragging its background
 // moves it, dragging the corner resizes it (its environment its size),
 // past its least size only once the pointer comes back, and an unmoved
-// one from its corner, its other edges staying; a click on the page behind it neither reaches the page nor dismisses it;
-// its own button does. A movable sheet that isn't resizable has no
-// corner.
+// one from its corner, its other edges staying; a click on the page
+// behind it neither reaches the page nor dismisses it; its own button
+// does. A movable sheet that isn't resizable has no corner. One with
+// dismissOutside is dismissed by a press outside it, not by one that
+// began on it and was let go outside.
 func TestSheetMovableWeb(t *testing.T) {
 	browser := chrome()
 	if browser == "" {
@@ -162,5 +164,20 @@ func TestSheetMovableWeb(t *testing.T) {
 		t.Fatalf("a resize corner on a sheet that isn't resizable: %s", r)
 	}
 	click(center("Done fixed"))
+	showsLine(t, s, "open false taps 1")
+
+	// dismissOutside: a press that began on it and is let go outside it
+	// leaves it open; a press outside it, on the backdrop, dismisses it,
+	// and reaches nothing behind it.
+	click(center("Show outside"))
+	x, y, w, h = rect("dialog.asuka-movable")
+	mouse("mousePressed", x+w-12, y+12)
+	mouse("mouseReleased", x-40, y+h/2)
+	if r := c.eval(t, page, `String(!!document.querySelector("dialog.asuka-movable"))`); !strings.Contains(r, "true") {
+		t.Fatalf("a press that began on it and was let go outside dismissed it")
+	}
+	x, y, w, h = rect("dialog.asuka-movable")
+	click(x-40, y+h/2)
+	showsLine(t, s, "outside false")
 	showsLine(t, s, "open false taps 1")
 }

@@ -242,6 +242,7 @@ public enum AsukaProp {
         public static let routed: UInt16 = 68
         public static let movable: UInt16 = 69
         public static let resizable: UInt16 = 70
+        public static let dismissOutside: UInt16 = 71
     }
 
     public enum Alert {

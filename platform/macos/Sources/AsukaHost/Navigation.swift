@@ -79,6 +79,9 @@ let asukaSheetMargin: CGFloat = 80
     var movable = false
     /// A Sheet's Resizable, with Movable: the user resizes its window too.
     var resizable = false
+    /// A Sheet's DismissOutside, with Movable: a press on the window it's
+    /// over dismisses it.
+    var dismissOutside = false
     /// A movable sheet as tall as its content has its first size: from
     /// then on its window's size is its own (the user's), which the core
     /// lays its content out at.
@@ -167,13 +170,20 @@ final class AsukaSheetWindow: NSWindow {
 
 /// What covers a window's content while a movable sheet over it shows, as
 /// a modal window takes the window it's over: it takes the presses and
-/// scrolls there, a press bringing the sheet forward. Hovers are kept from
-/// the window's views by behindModal, keys by the sheet keeping the focus.
+/// scrolls there, a press bringing the sheet forward, or dismissing it as
+/// Escape does (dismisses: the sheet's DismissOutside). Hovers are kept
+/// from the window's views by behindModal, keys by the sheet keeping the
+/// focus.
 final class AsukaModalBlocker: NSView {
     weak var sheet: NSWindow?
+    var dismisses = false
     override func hitTest(_ point: NSPoint) -> NSView? { frame.contains(point) ? self : nil }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override func mouseDown(with event: NSEvent) {
+        if dismisses, let s = sheet {
+            s.cancelOperation(nil)
+            return
+        }
         NSSound.beep()
         sheet?.makeKeyAndOrderFront(nil)
     }
@@ -668,17 +678,19 @@ final class AsukaModalBlocker: NSView {
                 w.animator().alphaValue = 1
             }
         }
-        blockWindow(over, w)
+        blockWindow(over, w, dismisses: n.nav?.dismissOutside ?? false)
         n.nav?.blocking = over.window
     }
 
-    /// Covers over's content while the movable sheet w shows over it, and
-    /// disables its close and minimize buttons (minimized, it would leave
-    /// the sheet alone on the screen).
-    func blockWindow(_ over: AsukaWin, _ w: NSWindow) {
+    /// Covers over's content while the movable sheet w shows over it (a
+    /// press there dismisses w when dismisses), and disables its close and
+    /// minimize buttons (minimized, it would leave the sheet alone on the
+    /// screen).
+    func blockWindow(_ over: AsukaWin, _ w: NSWindow, dismisses: Bool) {
         let b = AsukaModalBlocker(frame: over.content.bounds)
         b.autoresizingMask = [.width, .height]
         b.sheet = w
+        b.dismisses = dismisses
         over.content.addSubview(b)
         navTarget.blockers[ObjectIdentifier(over.window), default: []].append(b)
         over.window.standardWindowButton(.closeButton)?.isEnabled = false
@@ -954,6 +966,7 @@ final class AsukaModalBlocker: NSView {
             case AsukaProp.Sheet.fullScreen: nav.full = v.int != 0 || v.bool
             case AsukaProp.Sheet.movable: nav.movable = v.int != 0 || v.bool
             case AsukaProp.Sheet.resizable: nav.resizable = v.int != 0 || v.bool
+            case AsukaProp.Sheet.dismissOutside: nav.dismissOutside = v.int != 0 || v.bool
             default: break
             }
         case .popover:

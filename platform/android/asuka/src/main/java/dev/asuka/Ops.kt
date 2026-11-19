@@ -245,6 +245,7 @@ object AsukaProp {
         const val ROUTED = 68
         const val MOVABLE = 69
         const val RESIZABLE = 70
+        const val DISMISS_OUTSIDE = 71
     }
 
     object Alert {

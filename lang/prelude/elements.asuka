@@ -753,6 +753,8 @@ native component Sheet() {
   prop movable: bool
   /// with movable, the user can also resize it; a movable sheet isn't resizable without it, as a desktop's dialogs aren't
   prop resizable: bool
+  /// with movable, a press outside it dismisses it, as Escape does; a movable sheet takes no press outside without it
+  prop dismissOutside: bool
   event change(open: bool)
   /// the user dismissed it
   event dismiss

@@ -608,6 +608,21 @@ func TestNavMovableSheet(t *testing.T) {
 	if m := int(w["styleMask"].(float64)); m&styleResizable == 0 || m&styleClosable == 0 {
 		t.Fatalf("style mask %#x: a movable sheet the user can't resize or close", m)
 	}
+	// No title bar: its content, from its own header down, fills the
+	// window, which the user drags by its background.
+	if m := int(w["styleMask"].(float64)); m&styleFullSizeContent == 0 {
+		t.Fatalf("style mask %#x: its content under a title bar", m)
+	}
+	if b := w["titleBar"]; b != false {
+		t.Fatalf("title bar %v: a movable sheet shows no title, buttons or title bar", b)
+	}
+	if w["byBackground"] != true {
+		t.Fatal("not movable by its background")
+	}
+	cw, ch := size(w["content"])
+	if fw, fh := size(w["frame"]); cw != fw || ch != fh {
+		t.Fatalf("content %v in frame %v: not all of its window", w["content"], w["frame"])
+	}
 	// Centered over the main window.
 	mf := main.Frame
 	if len(mf) < 4 {

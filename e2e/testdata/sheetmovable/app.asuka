@@ -1,6 +1,6 @@
 // SheetMovable is a web e2e's app (e2e/sheet_movable_web_test.go): a
-// movable sheet, which the user moves by its bar and resizes by its
-// corner, its environment its content's size, and a counter on the page
+// movable sheet with no bar, which the user moves by its background and
+// resizes by its corner, closing it with its own button, its environment its content's size, and a counter on the page
 // behind it, which takes no press while it shows.
 
 component Root {
@@ -19,7 +19,9 @@ component Root {
       movable: true
       Column {
         padding: 20
+        gap: 8
         Text("sheet {environment().width}x{environment().height}")
+        Button("Done") { on press { open = false } }
       }
     }
   }

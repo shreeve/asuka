@@ -589,6 +589,31 @@ struct Reader {
         XCTAssertTrue(view(stack).isDescendant(of: view(second)))
     }
 
+    // MARK: Controls
+
+    /// A Picker draws its choice in its font, kept as its items and
+    /// choice change; textAlign and lineLimit, which a button's title
+    /// doesn't take, change nothing.
+    func testPickerFont() {
+        let r = root()
+        let p = make(.picker)
+        rt.insert(r, child: p, index: 0)
+        set(p, AsukaProp.fontSize, .float(13))
+        set(p, AsukaProp.fontWeight, .enumValue(AsukaFontWeight.semibold.rawValue))
+        var w = AsukaWriter()
+        w.u32(2); w.string("One"); w.string("Two")
+        bytes(w.bytes) { set(p, AsukaProp.Picker.items, .bytes($0)) }
+        set(p, AsukaProp.Picker.selected, .int(1))
+        set(p, AsukaProp.textAlign, .enumValue(AsukaTextAlign.center.rawValue))
+        set(p, AsukaProp.lineLimit, .int(1))
+        frame(p, CGRect(x: 0, y: 0, width: 200, height: 44))
+        let b = view(p) as! AsukaPickerButton
+        b.layoutIfNeeded()
+        XCTAssertEqual(b.titleLabel?.text, "Two")
+        XCTAssertEqual(b.titleLabel?.font.pointSize, 13)
+        XCTAssertEqual(b.titleLabel?.font.fontName, UIFont.systemFont(ofSize: 13, weight: .semibold).fontName)
+    }
+
     // MARK: asuka dev's error overlay
 
     /// A DevError command's arguments, as ops.AppendDevError writes them.

@@ -13,8 +13,9 @@ import (
 // on a wide page, with DevTools' trusted mouse events: a movable,
 // resizable sheet is a modal dialog centered over the page with no bar,
 // its content all of it, and a resize corner; dragging its background
-// moves it, dragging the corner resizes it (its environment its size); a
-// click on the page behind it neither reaches the page nor dismisses it;
+// moves it, dragging the corner resizes it (its environment its size),
+// past its least size only once the pointer comes back, and an unmoved
+// one from its corner, its other edges staying; a click on the page behind it neither reaches the page nor dismisses it;
 // its own button does. A movable sheet that isn't resizable has no
 // corner.
 func TestSheetMovableWeb(t *testing.T) {
@@ -50,7 +51,12 @@ func TestSheetMovableWeb(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	click := func(x, y float64) { t.Helper(); mouse("mouseMoved", x, y); mouse("mousePressed", x, y); mouse("mouseReleased", x, y) }
+	click := func(x, y float64) {
+		t.Helper()
+		mouse("mouseMoved", x, y)
+		mouse("mousePressed", x, y)
+		mouse("mouseReleased", x, y)
+	}
 	drag := func(x, y, dx, dy float64) {
 		t.Helper()
 		mouse("mousePressed", x, y)
@@ -106,6 +112,17 @@ func TestSheetMovableWeb(t *testing.T) {
 	// Dragged by its corner, it resizes, and its content with it.
 	drag(x+w-6, y+h-6, 60, -100)
 	showsLine(t, s, fmt.Sprintf("sheet %dx%d", int(w)+60, int(h)-100))
+	// Past its least width (240) its corner stays there, and the pointer
+	// coming back part of the way doesn't widen it.
+	gx, gy := x+w+60-6, y+h-100-6
+	mouse("mousePressed", gx, gy)
+	for _, px := range []float64{gx - 200, 5, 105} {
+		mouse("mouseMoved", px, gy)
+	}
+	mouse("mouseReleased", 105, gy)
+	showsLine(t, s, fmt.Sprintf("sheet 240x%d", int(h)-100))
+	drag(x+240-6, gy, w+60-240, 0)
+	showsLine(t, s, fmt.Sprintf("sheet %dx%d", int(w)+60, int(h)-100))
 
 	// A click on the page behind it reaches nothing and leaves it open
 	// (the count, read once it's closed, says the first).
@@ -126,6 +143,17 @@ func TestSheetMovableWeb(t *testing.T) {
 	if r := c.eval(t, page, `String(!!document.querySelector("dialog.asuka-movable"))`); !strings.Contains(r, "false") {
 		t.Fatalf("its dialog is still in the page: %s", r)
 	}
+
+	// Not moved, resized by its corner: its left and top edges stay.
+	click(center("Show"))
+	x, y, w, h = rect("dialog.asuka-movable")
+	drag(x+w-6, y+h-6, 80, 30)
+	showsLine(t, s, fmt.Sprintf("sheet %dx%d", int(w)+80, int(h)+30))
+	if nx, ny, _, _ := rect("dialog.asuka-movable"); nx != x || ny != y {
+		t.Fatalf("resized by its corner, an unmoved sheet moved from %v,%v to %v,%v", x, y, nx, ny)
+	}
+	click(center("Done"))
+	showsLine(t, s, "open false taps 1")
 
 	// Not resizable: no corner to resize it by.
 	click(center("Show fixed"))

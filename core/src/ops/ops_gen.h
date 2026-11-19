@@ -357,7 +357,7 @@ enum {
 	AK_PROP_SHEET_FULL_SCREEN = 67,
 	// a Router's sheet, a route of its own: as Stack's Routed, the web keeps no back entry of its own for it
 	AK_PROP_SHEET_ROUTED = 68,
-	// a desktop's sheet the user can move and resize, sent before Present: a Mac's a modal window over its window (which takes no input meanwhile) rather than a sheet attached to it, fading in where it opens; the web's a panel the user can move and resize over a backdrop; Windows' modal window already is one. A phone's sheet, Linux's dialog and a FullScreen sheet ignore it. A fit sheet (Detents 4) opens at its content's size (the core sends one Fit), the least the user sizes it to; after it the host sizes it, as a sheet that isn't fit
+	// a desktop's sheet the user can move and resize, sent before Present: a Mac's a modal window over its window (which takes no input meanwhile) rather than a sheet attached to it, with no title bar (moved by its background), fading in where it opens; the web's a card over a backdrop the user moves by its background and resizes by its corner; Windows' modal window already is one. A phone's sheet, Linux's dialog and a FullScreen sheet ignore it. A fit sheet (Detents 4) opens at its content's size (the core sends one Fit), the least the user sizes it to; after it the host sizes it, as a sheet that isn't fit
 	AK_PROP_SHEET_MOVABLE = 69,
 };
 

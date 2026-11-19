@@ -2,12 +2,13 @@
 // movable, resizable sheet with no bar, which the user moves by its
 // background and resizes by its corner, closing it with its own button,
 // its environment its content's size; a movable sheet that isn't
-// resizable; and a counter on the page behind them, which takes no press
-// while one shows.
+// resizable; one that a press outside dismisses (dismissOutside); and a
+// counter on the page behind them, which takes no press while one shows.
 
 component Root {
   state open = false
   state fixed = false
+  state outside = false
   state taps = 0
 
   Column {
@@ -18,6 +19,8 @@ component Root {
     Button("Show") { on press { open = true } }
     Button("Count") { on press { taps += 1 } }
     Button("Show fixed") { on press { fixed = true } }
+    Button("Show outside") { on press { outside = true } }
+    Text("outside {outside}")
     Sheet {
       bind open: open
       movable: true
@@ -27,6 +30,15 @@ component Root {
         gap: 8
         Text("sheet {environment().width}x{environment().height}")
         Button("Done") { on press { open = false } }
+      }
+    }
+    Sheet {
+      bind open: outside
+      movable: true
+      dismissOutside: true
+      Column {
+        padding: 20
+        Text("outside sheet")
       }
     }
     Sheet {

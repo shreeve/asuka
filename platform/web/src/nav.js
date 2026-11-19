@@ -537,7 +537,20 @@ export class Navigation {
     n.shown = true;
     this.dialogs.push(n);
     d.addEventListener("cancel", (e) => { e.preventDefault(); this.dismiss(n); });
-    d.addEventListener("click", (e) => { if (e.target === d && !n.fullScreen && !n.mv) this.dismiss(n); });
+    // A press on its backdrop dismisses it; a movable one's only with
+    // DismissOutside, and only a press that began there too (a drag of
+    // its background can end over the backdrop).
+    const outside = (e) => {
+      const r = d.getBoundingClientRect();
+      return e.target === d && (e.clientX < r.left || e.clientX >= r.right || e.clientY < r.top || e.clientY >= r.bottom);
+    };
+    let downOutside = false;
+    d.addEventListener("pointerdown", (e) => { downOutside = outside(e); });
+    d.addEventListener("click", (e) => {
+      if (e.target !== d || n.fullScreen) return;
+      if (n.mv && !(n.dismissOutside && downOutside && outside(e))) return;
+      this.dismiss(n);
+    });
     d.showModal();
     this.sizeDialog(n);
     const wide = this.wide() && !n.fullScreen;
@@ -1711,6 +1724,7 @@ const sheet = {
     if (p === P.Sheet.FullScreen) n.fullScreen = !!v; // before Present
     if (p === P.Sheet.Movable) n.movable = !!v; // before Present
     if (p === P.Sheet.Resizable) n.resizable = !!v; // before Present
+    if (p === P.Sheet.DismissOutside) n.dismissOutside = !!v; // before Present
     if (p === P.Sheet.Routed) n.routed = !!v; // a Router's: the history goes back from it
   },
   frame() { return true; },

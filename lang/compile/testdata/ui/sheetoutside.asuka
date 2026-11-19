@@ -1,0 +1,38 @@
+// A movable sheet's dismissOutside is sent with it, before its Present; a
+// sheet that isn't movable sends none (a press on its backdrop already
+// dismisses it where it has one).
+
+component Outside {
+  state open = false
+  state plain = false
+
+  Column {
+    Button("Open") { on press { open = true } }
+    Button("Plain") { on press { plain = true } }
+    Sheet {
+      bind open: open
+      movable: true
+      dismissOutside: true
+      Button("Close") { on press { open = false } }
+    }
+    Sheet {
+      bind open: plain
+      dismissOutside: true
+      Text("plain")
+    }
+  }
+}
+
+
+app { Outside() }
+
+test "a movable sheet's dismissOutside is sent with it" {
+  let app = mount(Outside())
+  app.ops()
+  app.tap("Open")
+  let ops = app.ops()
+  expect(ops.contains("DismissOutside=true") && ops.contains("Movable=true"), ops)
+  app.tap("Close")
+  app.tap("Plain")
+  expect(!app.ops().contains("DismissOutside"), "a sheet that isn't movable sent it")
+}

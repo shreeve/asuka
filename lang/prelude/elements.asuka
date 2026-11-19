@@ -749,6 +749,8 @@ native component Sheet() {
   prop grabber: bool
   /// covers the screen; the user can't swipe it away
   prop fullScreen: bool
+  /// on a desktop, a dialog the user can move and resize (a Mac's modal window, the web's panel) rather than a sheet attached to the window; phones ignore it
+  prop movable: bool
   event change(open: bool)
   /// the user dismissed it
   event dismiss

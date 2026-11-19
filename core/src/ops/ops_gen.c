@@ -164,6 +164,7 @@ static const ak_prop_info props_Sheet[] = {
 	{"Window", AK_T_INT, -1},
 	{"FullScreen", AK_T_BOOL, -1},
 	{"Routed", AK_T_BOOL, -1},
+	{"Movable", AK_T_BOOL, -1},
 };
 
 static const ak_prop_info props_Alert[] = {
@@ -372,7 +373,7 @@ const ak_prop_info *const ak_kind_props[AK_KIND_COUNT] = {
 	props_Overlay,
 };
 
-const uint8_t ak_kind_prop_counts[AK_KIND_COUNT] = {0, 2, 1, 3, 14, 2, 3, 5, 9, 1, 1, 14, 1, 5, 6, 7, 2, 2, 0, 1, 2, 2, 4, 3, 2, 9, 6, 6, 5, 2, 3, 2, 1, 3, 3, 5, 3, 2, 4, 3};
+const uint8_t ak_kind_prop_counts[AK_KIND_COUNT] = {0, 2, 1, 3, 14, 2, 3, 5, 9, 1, 1, 14, 1, 6, 6, 7, 2, 2, 0, 1, 2, 2, 4, 3, 2, 9, 6, 6, 5, 2, 3, 2, 1, 3, 3, 5, 3, 2, 4, 3};
 
 static const char *const enum_Role[] = {"None", "Button", "Header", "Image", "Link", "Text", "Search", "Checkbox", "Radio", "RadioGroup", "Switch", "Tab", "TabList", "TabPanel", "Slider", "SpinButton", "ProgressBar", "Meter", "Menu", "MenuBar", "MenuItem", "MenuItemCheckbox", "MenuItemRadio", "Listbox", "Option", "ComboBox", "Dialog", "AlertDialog", "Tooltip", "Group", "Separator", "Toolbar", "Status"};
 static const char *const enum_A11yChecked[] = {"None", "Unchecked", "Checked", "Mixed"};

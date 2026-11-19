@@ -243,6 +243,7 @@ object AsukaProp {
         const val WINDOW = 66
         const val FULL_SCREEN = 67
         const val ROUTED = 68
+        const val MOVABLE = 69
     }
 
     object Alert {

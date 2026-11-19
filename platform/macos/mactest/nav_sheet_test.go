@@ -3,6 +3,7 @@
 package mactest
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -538,4 +539,118 @@ func TestNavZoomFrom(t *testing.T) {
 	if !shown(tr, "Tile 2") {
 		t.Fatalf("the tile the screen zoomed back into stayed hidden:\n%s", tr.Raw())
 	}
+}
+
+// A movable sheet is a window of its own, not a sheet: a child of its
+// window, centered over it, the key window, popping in as an alert panel
+// does, which the user can move and resize. Its window takes no presses
+// meanwhile. A fit one opens at its content's size and follows it until
+// the user resizes it, after which the user's size stays. Escape and its
+// close button dismiss it.
+func TestNavMovableSheet(t *testing.T) {
+	a := Run(t, `
+		app { Root() }
+		component Root {
+		  state open = false
+		  state taps = 0
+		  state more = false
+		  Column {
+		    padding: 20
+		    Text("open {open} taps {taps}")
+		    Button("Show") { on press { open = true } }
+		    Button("Count") { on press { taps += 1 } }
+		    Sheet {
+		      bind open: open
+		      detents: [.fit]
+		      movable: true
+		      Column {
+		        padding: 20
+		        View { height: 100; background: .blue }
+		        if more { View { height: 50; background: .green } }
+		        Button("More") { on press { more = !more } }
+		        Text("sheet {environment().width}x{environment().height}")
+		      }
+		    }
+		  }
+		}
+	`)
+	a.UntilText("open false taps 0")
+	a.Do("tap Show")
+	shown := func(what string, ok func(w map[string]any, s *Node) bool) *Tree {
+		t.Helper()
+		return a.Until(func(tr *Tree) bool {
+			s := sheetOf(tr)
+			if s == nil {
+				return false
+			}
+			w := sheetWindow(s)
+			return w["visible"] == true && w["isSheet"] == false && ok(w, s)
+		})
+	}
+	tr := shown("opened", func(w map[string]any, s *Node) bool {
+		return w["childOf"] != "" && w["key"] == true && w["alertPanel"] == true && w["blocks"] == true
+	})
+	main := tr.Main()
+	s := sheetOf(tr)
+	w := sheetWindow(s)
+	if p := w["childOf"]; p != tr.Main().Title {
+		t.Fatalf("a child of %q, not of the main window %q", p, tr.Main().Title)
+	}
+	if m := int(w["styleMask"].(float64)); m&styleResizable == 0 || m&styleClosable == 0 {
+		t.Fatalf("style mask %#x: a movable sheet the user can't resize or close", m)
+	}
+	// Centered over the main window.
+	mf := main.Frame
+	if len(mf) < 4 {
+		t.Fatalf("the main window has no frame: %v", mf)
+	}
+	sx, sy := pair(w["frame"])
+	sw, sh := size(w["frame"])
+	if d := (mf[0] + mf[2]/2) - (sx + sw/2); d > 1 || d < -1 {
+		t.Fatalf("not centered across: main %v, sheet %v", mf, w["frame"])
+	}
+	if d := (mf[1] + mf[3]/2) - (sy + sh/2); d > 1 || d < -1 {
+		t.Fatalf("not centered down: main %v, sheet %v", mf, w["frame"])
+	}
+	// At its content's height, and following it.
+	bh := tr.Find("Button", "More").Frame[3]
+	th := -1.0
+	for _, n := range tr.All() {
+		if n.Kind == "Text" && strings.HasPrefix(n.Text, "sheet ") {
+			th = n.Frame[3]
+		}
+	}
+	base := 20 + 100 + bh + th + 20
+	fits := func(what string, h float64) {
+		t.Helper()
+		shown(what, func(w map[string]any, s *Node) bool { _, ch := size(w["content"]); return ch == h })
+	}
+	fits("opened at its content's height", base)
+	a.Do("tap More")
+	fits("grown with its content", base+50)
+	// A click on its window goes nowhere.
+	a.Do("click Count")
+	// The user resizes it: that size stays as its content changes, and
+	// its environment is that size.
+	a.Do("sheetresize 500,420")
+	shown("resized", func(w map[string]any, s *Node) bool {
+		cw, ch := size(w["content"])
+		ew, eh := pair(s.Get("env"))
+		return cw == 500 && ch == 420 && ew == 500 && eh == 420
+	})
+	a.Do("tap More")
+	a.UntilText("sheet 500x420")
+	shown("the user's size kept", func(w map[string]any, s *Node) bool { cw, ch := size(w["content"]); return cw == 500 && ch == 420 })
+	// Its close button dismisses it; the click before it never counted.
+	a.Do("sheetclose")
+	a.UntilText("open false taps 0")
+	a.Until(func(tr *Tree) bool { return sheetOf(tr) == nil })
+	// Its window takes clicks again.
+	a.Do("click Count")
+	a.UntilText("open false taps 1")
+	// Opened again, Escape dismisses it.
+	a.Do("tap Show")
+	shown("opened again", func(w map[string]any, s *Node) bool { return w["key"] == true })
+	a.Do("cancel")
+	a.UntilText("open false taps 1")
 }

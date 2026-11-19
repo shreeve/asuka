@@ -17,7 +17,10 @@
 //     wide one. Escape, a click outside or a swipe down dismisses it. A
 //     FullScreen one covers the whole page (a Window's panel's content,
 //     for one declared in a Window), sliding up; only Escape (or going
-//     back) dismisses it.
+//     back) dismisses it. A Movable one on a wide window is a card the
+//     user can move by its bar and resize by its corner, as a Window's
+//     panel, centered over the page until moved; Escape and its bar's
+//     close button dismiss it, a click outside doesn't.
 //   - An Alert is a modal <dialog> too; an action sheet's buttons a list.
 //   - A Popover is a popover element next to what it points at.
 //   - A SplitView is a sidebar beside its detail Stack; on a narrow
@@ -581,6 +584,10 @@ export class Navigation {
     const d = document.createElement("dialog");
     d.className = n.fullScreen ? "asuka-sheet-dialog asuka-full-screen" : "asuka-sheet-dialog";
     this.h.container.appendChild(d);
+    // Movable on a wide window: a bar to move it by, with its close
+    // button, and a corner to resize it by, as a Window's panel.
+    n.mv = n.movable && !n.fullScreen && this.wide() ? { x: 0, y: 0, w: 0, h: 0, bar: 36, moved: false, sized: false } : null;
+    if (n.mv) this.movableParts(n, d);
     d.appendChild(n.el);
     if (n.grabber && !n.fullScreen) {
       const g = div("asuka-grabber");
@@ -591,7 +598,7 @@ export class Navigation {
     n.shown = true;
     this.dialogs.push(n);
     d.addEventListener("cancel", (e) => { e.preventDefault(); this.dismiss(n); });
-    onBackdropPress(d, () => { if (!n.fullScreen) this.dismiss(n); });
+    onBackdropPress(d, () => { if (!n.fullScreen && !n.mv) this.dismiss(n); });
     d.showModal();
     this.sizeDialog(n);
     const wide = this.wide() && !n.fullScreen;
@@ -640,6 +647,33 @@ export class Navigation {
     begin();
   }
 
+  /** movableParts gives a movable sheet's dialog its bar (moving it, closing it) and its resize corner. */
+  movableParts(n, d) {
+    d.classList.add("asuka-movable");
+    const bar = div("asuka-window-bar");
+    const close = iconButton("xmark", "Close", false);
+    close.addEventListener("click", () => this.dismiss(n));
+    bar.append(div("asuka-window-title"), close);
+    d.append(bar);
+    this.drag(bar, (dx, dy) => {
+      const m = n.mv, c = this.h.container.getBoundingClientRect();
+      // Its bar stays where the pointer can take it again.
+      m.x = Math.min(Math.max(m.x + dx, c.left + 80 - m.w), c.right - 80);
+      m.y = Math.min(Math.max(m.y + dy, c.top), c.bottom - m.bar);
+      m.moved = true;
+      this.sizeDialog(n);
+    });
+    const grip = div("asuka-window-grip");
+    d.append(grip);
+    this.drag(grip, (dx, dy) => {
+      const m = n.mv, c = this.h.container.getBoundingClientRect();
+      m.w = Math.min(Math.max(m.w + dx, 240), c.right - m.x);
+      m.h = Math.min(Math.max(m.h + dy, 120), c.bottom - m.y - m.bar);
+      m.sized = true;
+      this.sizeDialog(n);
+    });
+  }
+
   sizeDialog(n) {
     const c = this.h.container.getBoundingClientRect();
     const d = n.dialog;
@@ -667,6 +701,26 @@ export class Navigation {
       h = a.h;
       d.style.left = a.x + "px";
       d.style.top = a.y + "px";
+    } else if (n.kind === Kind.Sheet && n.mv) {
+      // A movable sheet: a wide sheet's size until the user resizes it,
+      // centered over the page (its Window's panel's content) until the
+      // user moves it; its bar above its content.
+      const m = n.mv, w0 = this.panelOf(n);
+      const a = w0 ? this.panelArea(w0, c) : { x: c.left, y: c.top, w: c.width, h: c.height };
+      m.area = a;
+      d.classList.add("asuka-wide", "asuka-on-window");
+      if (!m.sized) {
+        m.w = Math.min(c.width - 80, 560);
+        m.h = Math.min(c.height - 80, n.detents === 1 ? Math.max(c.height / 2, 320) : 720) - m.bar;
+      }
+      if (!m.moved) {
+        m.x = Math.round(a.x + (a.w - m.w) / 2);
+        m.y = Math.round(Math.max(a.y + (a.h - m.h - m.bar) / 2, c.top + 8));
+      }
+      w = m.w;
+      h = m.h + m.bar;
+      d.style.left = m.x + "px";
+      d.style.top = m.y + "px";
     } else if ((n.kind === Kind.Sheet) && this.panelOf(n)) {
       // A sheet of a Window's panel: a card over the panel's content,
       // as a desktop's sheet over its window.
@@ -699,14 +753,28 @@ export class Navigation {
     // A sheet as tall as its content is as big as the core laid it out
     // (fitSheet), its room what it reports: what the core fits it in.
     const room = [w, h];
-    if (n.fit && this.fitsContent(n)) {
+    if (n.fit && this.fitsContent(n) && !n.mv?.sized) {
+      // A movable one: its content's size under its bar, centered on that
+      // until moved, and the size the user's resizing starts from.
+      const bar = n.mv ? n.mv.bar : 0;
       w = Math.min(n.fit[0], c.width);
-      h = Math.min(n.fit[1], h);
+      h = Math.min(n.fit[1] + bar, h);
+      const m = n.mv;
+      if (m) {
+        m.w = w;
+        m.h = h - bar;
+        if (!m.moved) {
+          m.x = Math.round(m.area.x + (m.area.w - w) / 2);
+          m.y = Math.round(Math.max(m.area.y + (m.area.h - h) / 2, c.top + 8));
+          d.style.left = m.x + "px";
+          d.style.top = m.y + "px";
+        }
+      }
     }
     d.style.width = w + "px";
     d.style.height = h + "px";
     const s = n.el.style;
-    const top = n.kind === Kind.Window ? n.win.bar : 0;
+    const top = n.kind === Kind.Window ? n.win.bar : n.mv ? n.mv.bar : 0;
     if (n.kind === Kind.Window && n.win.minimized) {
       this.h.windows.report(n);
       return;
@@ -1758,6 +1826,7 @@ const sheet = {
     if (p === P.Sheet.Grabber) n.grabber = !!v;
     if (p === P.Sheet.Window) n.winID = v; // the window it's declared in: the root's, a Window's
     if (p === P.Sheet.FullScreen) n.fullScreen = !!v; // before Present
+    if (p === P.Sheet.Movable) n.movable = !!v; // before Present
     if (p === P.Sheet.Routed) n.routed = !!v; // a Router's: the history goes back from it
   },
   frame() { return true; },

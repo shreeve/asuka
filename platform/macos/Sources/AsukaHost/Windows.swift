@@ -594,7 +594,8 @@ extension AsukaWin {
     func windowDidMove(_ notification: Notification) { AsukaRuntime.shared.windowsChanged() }
     func windowDidBecomeKey(_ notification: Notification) {
         let rt = AsukaRuntime.shared
-        // A movable sheet over it keeps the keys (Navigation.swift).
+        // A movable sheet over it stays in front and keeps the keys
+        // (Navigation.swift).
         if let s = rt.blockingSheet(window), s.isVisible { s.makeKeyAndOrderFront(nil) }
         rt.windowsChanged()
     }

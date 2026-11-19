@@ -3,6 +3,7 @@
 package mactest
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -588,8 +589,11 @@ func TestNavMovableSheet(t *testing.T) {
 			return w["visible"] == true && w["isSheet"] == false && ok(w, s)
 		})
 	}
+	// The key window, while the app is active (macOS doesn't activate a
+	// test's player while the user works in another app).
+	keyed := func(w map[string]any) bool { return w["key"] == true || !appActive(a.Tree()) }
 	tr := shown("opened", func(w map[string]any, s *Node) bool {
-		return w["childOf"] != "" && w["key"] == true && w["alertPanel"] == true && w["blocks"] == true
+		return w["childOf"] != "" && keyed(w) && w["alertPanel"] == true && w["blocks"] == true
 	})
 	main := tr.Main()
 	s := sheetOf(tr)
@@ -659,7 +663,18 @@ func TestNavMovableSheet(t *testing.T) {
 	a.UntilText("open false taps 1")
 	// Opened again, Escape dismisses it.
 	a.Do("tap Show")
-	shown("opened again", func(w map[string]any, s *Node) bool { return w["key"] == true })
+	shown("opened again", func(w map[string]any, s *Node) bool { return keyed(w) })
 	a.Do("cancel")
 	a.UntilText("open false taps 1")
+}
+
+// appActive is whether the player is the active app.
+func appActive(tr *Tree) bool {
+	var d struct {
+		App struct {
+			Active bool `json:"active"`
+		} `json:"app"`
+	}
+	json.Unmarshal([]byte(tr.Raw()), &d)
+	return d.App.Active
 }

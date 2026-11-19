@@ -1,0 +1,31 @@
+// DialogSelect is a web e2e's app (e2e/dialogselect_test.go): a sheet
+// with a title, a Close button and two selectable texts, for select all
+// (one selectable text, not the dialog) and a dialog's own text (not
+// selectable).
+
+component Dialogs {
+  state open = false
+
+  Column {
+    padding: 12
+    gap: 6
+    Text("status: ready")
+    Button("Open") { on press { open = true } }
+    Sheet {
+      bind open: open
+      Column {
+        padding: 12
+        gap: 6
+        Row {
+          gap: 12
+          Text("Sheet title") { grow: 1 }
+          Button("Close") { on press { open = false } }
+        }
+        Text("First line of the body\nSecond line of the body") { selectable: true }
+        Text("Another selectable text") { selectable: true }
+      }
+    }
+  }
+}
+
+app { Dialogs() }

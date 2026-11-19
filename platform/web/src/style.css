@@ -451,7 +451,7 @@ textarea.asuka-field { overflow-y: auto; display: block; }
 
 /* Sheets, alerts, popovers, menus, windows */
 
-.asuka dialog { color: var(--asuka-label); font: inherit; }
+.asuka dialog { color: var(--asuka-label); font: inherit; user-select: none; -webkit-user-select: none; }
 .asuka-sheet-dialog {
   position: fixed;
   inset: auto 0 0 0;

@@ -3218,6 +3218,7 @@ bench "fib 20" {
 - format-spec: an interpolation's format that doesn't fit its value. Write the format for the value's type, as the message says: `{n:>6}`, `{x:.2f}`, `{n:#x}`, `{name:<12}`.
 - group-not-calls: `load (…)` of what isn't each a call. Group the calls only (`load (api.user(id), api.posts(id))`), and pass the values to them, or beside the load.
 - import-cycle: packages that import each other. Move what both need into a third package they both import.
+- indentation: a line's indentation matches no open block, or holds a tab. Line the line up with the block it belongs to (the same indentation as the lines before it in that block), or write the block with braces.
 - inline-snapshot: an inline snapshot that isn't a string written in the call. Write the snapshot as a string literal, or leave it out (`expectInlineSnapshot(value)`) and let `asuka test` write it on its first run.
 - int-overflow: an integer literal that doesn't fit in its type. Use a number in the range, a wider type (`u16`, `int`, `u64`), a `float`, or, for an exact integer past 64 bits, `std/bigint`'s `BigInt` (`BigInt.parse("9223372036854775808")!`).
 - interface-not-satisfied: a type that declares an interface it doesn't implement. Add the missing methods (the message lists them), with the interface's signatures.

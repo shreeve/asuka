@@ -24,6 +24,7 @@ Asuka が報告するエラーと警告には、すべてコードがありま�
 - [format-spec](format-spec.md): 値に合わない補間の書式。
 - [group-not-calls](group-not-calls.md): `load (…)` の要素が、どれも呼び出しというわけではない。
 - [import-cycle](import-cycle.md): 互いにインポートし合うパッケージ。
+- [indentation](indentation.md): 行のインデントが開いているどのブロックにも合わない、またはタブを含む。
 - [inline-snapshot](inline-snapshot.md): 呼び出しに直接書かれた文字列ではないインラインスナップショット。
 - [int-overflow](int-overflow.md): 型の範囲に収まらない整数リテラル。
 - [interface-not-satisfied](interface-not-satisfied.md): 宣言した interface を実装していない型。

@@ -11,7 +11,7 @@
 //     has no full-screen modal of its own, and a sheet is how AppKit takes
 //     a window for a task; so does Escape. A Movable one is a window of its
 //     own the user can move and resize, centered over its window and in
-//     front of it, popping in from its center as an alert panel does; its
+//     front of it, fading in where it opens (120 ms; closing is at once); its
 //     window takes no presses, scrolls, hovers or keys meanwhile
 //     (AsukaModalBlocker), and Escape or its close button dismisses it.
 //     It isn't a child window: the window server drags a window smoothly
@@ -542,7 +542,8 @@ final class AsukaModalBlocker: NSView {
     }
 
     /// Shows a movable sheet: centered over its window (on its screen),
-    /// in front of it, its window blocked.
+    /// in front of it, fading in where it opens unless Reduce Motion is
+    /// on, its window blocked.
     func showMovable(_ n: AsukaNode, _ w: NSWindow, _ over: AsukaWin) {
         let p = over.window.frame
         let s = w.frame.size
@@ -552,7 +553,19 @@ final class AsukaModalBlocker: NSView {
             o.y = min(max(o.y, vf.minY), max(vf.maxY - s.height, vf.minY))
         }
         w.setFrameOrigin(o)
-        w.makeKeyAndOrderFront(nil)
+        if env.reduceMotion {
+            w.makeKeyAndOrderFront(nil)
+        } else {
+            w.alphaValue = 0
+            w.makeKeyAndOrderFront(nil)
+            NSAnimationContext.runAnimationGroup { ctx in
+                // Short enough not to read as a wait on a dialog opened many
+                // times a day, long enough not to pop.
+                ctx.duration = 0.12
+                ctx.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0, 0, 1)
+                w.animator().alphaValue = 1
+            }
+        }
         blockWindow(over, w)
         n.nav?.blocking = over.window
     }
@@ -831,7 +844,7 @@ final class AsukaModalBlocker: NSView {
         let w = AsukaSheetWindow(contentRect: CGRect(origin: .zero, size: size), styleMask: style, backing: .buffered, defer: false)
         w.isReleasedWhenClosed = false
         if movable {
-            w.animationBehavior = .alertPanel
+            w.animationBehavior = .none // it fades in (showMovable)
             w.contentMinSize = CGSize(width: 240, height: 120)
             watchMovable(n, w)
         }
@@ -1112,7 +1125,7 @@ final class AsukaModalBlocker: NSView {
                 d["sheetWindow"] = ["visible": w.isVisible, "styleMask": w.styleMask.rawValue,
                                     "content": asukaRectJSON(w.contentView?.bounds ?? .zero), "frame": asukaRectJSON(w.frame),
                                     "isSheet": w.sheetParent != nil, "parent": w.sheetParent?.title ?? "",
-                                    "childOf": w.parent?.title ?? "", "over": nav.blocking?.title ?? "", "key": w.isKeyWindow, "alertPanel": w.animationBehavior == .alertPanel,
+                                    "childOf": w.parent?.title ?? "", "over": nav.blocking?.title ?? "", "key": w.isKeyWindow, "alpha": Double(w.alphaValue), "animation": w.animationBehavior.rawValue,
                                     "minSize": [Double(w.contentMinSize.width), Double(w.contentMinSize.height)],
                                     "blocks": nav.blocking.map { blockingSheet($0) === w } ?? false] as [String: Any]
                 if let over = onWin(n) {

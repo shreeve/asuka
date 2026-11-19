@@ -541,7 +541,9 @@ export class Navigation {
     this.sizeDialog(n);
     const wide = this.wide() && !n.fullScreen;
     if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      d.animate(wide ? [{ opacity: 0, transform: "scale(0.96)" }, { opacity: 1, transform: "none" }] : [{ transform: "translateY(100%)" }, { transform: "none" }], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
+      // A movable one fades in where it opens, as a desktop's dialog does.
+      if (n.mv) d.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 120, easing: "cubic-bezier(0.2, 0, 0, 1)" });
+      else d.animate(wide ? [{ opacity: 0, transform: "scale(0.96)" }, { opacity: 1, transform: "none" }] : [{ transform: "translateY(100%)" }, { transform: "none" }], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
     }
     this.updateGuard();
   }

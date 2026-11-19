@@ -445,9 +445,9 @@ const toggle = {
 
 function rectOf(h, el, inner) {
   return h.measurable(el, () => {
-    const r = inner.getBoundingClientRect();
+    const [w, hh] = text.boxSize(inner);
     const cs = getComputedStyle(inner);
-    return { width: r.width + parseFloat(cs.marginLeft) + parseFloat(cs.marginRight), height: r.height + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom) };
+    return { width: w + parseFloat(cs.marginLeft) + parseFloat(cs.marginRight), height: hh + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom) };
   });
 }
 

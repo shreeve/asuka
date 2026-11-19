@@ -1,0 +1,3 @@
+name = "Text Transform"
+id = "dev.asuka.texttransform"
+orientations = ["portrait"]

@@ -840,11 +840,18 @@ final class AsukaModalBlocker: NSView {
             style = [.titled]
         }
         let movable = isMovable(n)
-        if movable { style = [.titled, .closable, .resizable] }
+        // A movable sheet has no title bar: its own header is its top, and
+        // the user drags it by its background. Titled, it keeps a window's
+        // shadow, corners and resizing; closable, ⌘W closes it.
+        if movable { style = [.titled, .closable, .resizable, .fullSizeContentView] }
         let w = AsukaSheetWindow(contentRect: CGRect(origin: .zero, size: size), styleMask: style, backing: .buffered, defer: false)
         w.isReleasedWhenClosed = false
         if movable {
             w.animationBehavior = .none // it fades in (showMovable)
+            w.titleVisibility = .hidden
+            w.titlebarAppearsTransparent = true
+            for b in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] { w.standardWindowButton(b)?.isHidden = true }
+            w.isMovableByWindowBackground = true
             w.contentMinSize = CGSize(width: 240, height: 120)
             watchMovable(n, w)
         }
@@ -1127,6 +1134,9 @@ final class AsukaModalBlocker: NSView {
                                     "isSheet": w.sheetParent != nil, "parent": w.sheetParent?.title ?? "",
                                     "childOf": w.parent?.title ?? "", "over": nav.blocking?.title ?? "", "key": w.isKeyWindow, "alpha": Double(w.alphaValue), "animation": w.animationBehavior.rawValue,
                                     "minSize": [Double(w.contentMinSize.width), Double(w.contentMinSize.height)],
+                                    "titleBar": w.titleVisibility == .visible || !w.titlebarAppearsTransparent
+                                        || [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton].contains { !(w.standardWindowButton($0)?.isHidden ?? true) },
+                                    "byBackground": w.isMovableByWindowBackground,
                                     "blocks": nav.blocking.map { blockingSheet($0) === w } ?? false] as [String: Any]
                 if let over = onWin(n) {
                     let r = sheetRoom(n, over)

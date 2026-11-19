@@ -93,7 +93,19 @@ const textView = {
   lines(h, n) { lineClamp(n.el, n.lines); },
   measure(h, n, c) {
     if (!n.text) return [0, 0];
-    return h.measureElement(n, n.el, c, { tight: true });
+    const size = h.measureElement(n, n.el, c, { tight: true });
+    if (n.lines === 1 && c.availW === -Infinity && c.width !== c.width) {
+      // A line that's cut short with an ellipsis is as narrow as its
+      // widest word, as the native hosts measure it, so it can shrink: on
+      // one line (white-space: pre) the browser's min-content is all of it.
+      n.el.classList.remove("asuka-one-line");
+      try {
+        size[0] = Math.min(size[0], h.measureElement(n, n.el, c, { tight: true })[0]);
+      } finally {
+        n.el.classList.add("asuka-one-line");
+      }
+    }
+    return size;
   },
 };
 

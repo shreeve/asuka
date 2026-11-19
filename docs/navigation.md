@@ -680,9 +680,9 @@ Sheet {
 
 | | A movable sheet |
 |---|---|
-| macOS | a window of its own, centered over its window and in front of it, popping in from its center as an alert does; its window takes no presses, scrolls or hovers meanwhile |
+| macOS | a window of its own, centered over its window and in front of it, fading in where it opens; its window takes no presses, scrolls or hovers meanwhile |
 | Windows | a modal window over the window in use, which a sheet already is |
-| The web | a card over a backdrop on a wide window, moved by a bar along its top (with its close button) and resized by its corner, as a Window's panel |
+| The web | a card over a backdrop on a wide window, fading in where it opens, moved by a bar along its top (with its close button) and resized by its corner, as a Window's panel |
 | iOS, Android, Linux | a sheet as without it: a phone's sheet isn't moved, and libadwaita's dialogs aren't |
 
 A `fullScreen` sheet ignores it.

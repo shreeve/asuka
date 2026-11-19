@@ -544,8 +544,8 @@ func TestNavZoomFrom(t *testing.T) {
 
 // A movable sheet is a window of its own, not a sheet, nor a child window
 // (which the window server doesn't drag smoothly): centered over its
-// window and in front of it, the key window, popping in as an alert panel
-// does, which the user can move and resize. Its window takes no presses
+// window and in front of it, the key window, faded in where it opens (no
+// zoom or bounce of AppKit's own), which the user can move and resize. Its window takes no presses
 // meanwhile. A fit one opens at its content's size, the least the user
 // can size it to; after that its size is its window's, which its content
 // is laid out at, whatever the content does. Escape and its close button
@@ -594,7 +594,7 @@ func TestNavMovableSheet(t *testing.T) {
 	// test's player while the user works in another app).
 	keyed := func(w map[string]any) bool { return w["key"] == true || !appActive(a.Tree()) }
 	tr := shown("opened", func(w map[string]any, s *Node) bool {
-		return w["over"] != "" && keyed(w) && w["alertPanel"] == true && w["blocks"] == true
+		return w["over"] != "" && keyed(w) && w["alpha"] == 1.0 && w["animation"] == 2.0 && w["blocks"] == true
 	})
 	main := tr.Main()
 	s := sheetOf(tr)

@@ -375,7 +375,7 @@ typedef struct ak_prov {
 	bool full_width;
 	bool fit_sheet;  // a sheet as tall as its content (Detent fit)
 	bool fit_wait;   // a fit sheet waits for its room (its first Environment)
-	bool fit_once;   // a movable fit sheet: its content's size as it opens, then the host's (the user's)
+	bool fit_once;   // a resizable movable fit sheet: its content's size as it opens, then the user's
 	bool fit_win;    // a window sized to its content
 	bool fit_sent;
 	// An enclosing provider whose environment it takes, as that changes,
@@ -468,7 +468,7 @@ ak_view *ak_alert_window(ak_ui_root *r);
 void ak_router_href(ak_view *from, ak_str *href);  // a Button's href, pressed
 bool ak_router_incoming(ak_span url);
 void ak_router_location(ak_view *win, const ak_event *ev);
-ak_view *ak_sheet_present(ak_ui_root *r, ak_owner *owner, ak_closure *build, ak_val *args, uint32_t nargs, int64_t detents, bool grabber, bool full, bool movable, bool routed, void (*dismissed)(void *ctx), void *ctx);
+ak_view *ak_sheet_present(ak_ui_root *r, ak_owner *owner, ak_closure *build, ak_val *args, uint32_t nargs, int64_t detents, bool grabber, bool full, bool movable, bool resizable, bool routed, void (*dismissed)(void *ctx), void *ctx);
 void ak_sheet_close(ak_view *sheet);
 
 // ---- control.c ----

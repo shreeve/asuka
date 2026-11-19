@@ -16,8 +16,8 @@
 //     FullScreen one covers the whole page (a Window's panel's content,
 //     for one declared in a Window), sliding up; only Escape (or going
 //     back) dismisses it. A Movable one on a wide window is a card the
-//     user can move by its background and resize by its corner, with no
-//     bar (its own header its top), centered over the page until moved;
+//     user can move by its background (a Resizable one resize by its
+//     corner), with no bar (its own header its top), centered over the page until moved;
 //     Escape dismisses it, a click outside doesn't.
 //   - An Alert is a modal <dialog> too; an action sheet's buttons a list.
 //   - A Popover is a popover element next to what it points at.
@@ -523,7 +523,8 @@ export class Navigation {
     d.className = n.fullScreen ? "asuka-sheet-dialog asuka-full-screen" : "asuka-sheet-dialog";
     this.h.container.appendChild(d);
     // Movable on a wide window: no bar, its content all of it (its own
-    // header its top), moved by its background, resized by its corner.
+    // header its top), moved by its background, a resizable one resized
+    // by its corner.
     n.mv = n.movable && !n.fullScreen && this.wide() ? { x: 0, y: 0, w: 0, h: 0, minW: 240, minH: 120, moved: false, sized: false } : null;
     if (n.mv) this.movableParts(n, d);
     d.appendChild(n.el);
@@ -548,7 +549,7 @@ export class Navigation {
     this.updateGuard();
   }
 
-  /** movableParts makes a movable sheet's dialog move by its background and resize by its corner. */
+  /** movableParts makes a movable sheet's dialog move by its background, and a resizable one's resize by its corner. */
   movableParts(n, d) {
     d.classList.add("asuka-movable");
     // Its background: inside it (a press on the backdrop is the dialog's
@@ -560,23 +561,32 @@ export class Navigation {
       if (!(t instanceof Element) || t.closest("button, input, select, textarea, a, [contenteditable], .asuka-pressable, .asuka-selectable, .asuka-window-grip")) return false;
       return !(t.clientWidth && e.offsetX > t.clientWidth) && !(t.clientHeight && e.offsetY > t.clientHeight);
     };
+    // A drag follows where the pointer is, not each step it takes: past a
+    // limit it stays at the limit until the pointer comes back to it.
     this.drag(d, (dx, dy) => {
       const m = n.mv, c = this.h.container.getBoundingClientRect();
+      if (!m.at) m.at = [m.x, m.y];
+      m.at[0] += dx;
+      m.at[1] += dy;
       // It stays where the pointer can take it again.
-      m.x = Math.min(Math.max(m.x + dx, c.left + 80 - m.w), c.right - 80);
-      m.y = Math.min(Math.max(m.y + dy, c.top), c.bottom - 40);
+      m.x = Math.min(Math.max(m.at[0], c.left + 80 - m.w), c.right - 80);
+      m.y = Math.min(Math.max(m.at[1], c.top), c.bottom - 40);
       m.moved = true;
       this.sizeDialog(n);
-    }, null, background);
+    }, () => { n.mv.at = null; }, background);
+    if (!n.resizable) return;
     const grip = div("asuka-window-grip");
     d.append(grip);
     this.drag(grip, (dx, dy) => {
       const m = n.mv, c = this.h.container.getBoundingClientRect();
-      m.w = Math.min(Math.max(m.w + dx, m.minW), c.right - m.x);
-      m.h = Math.min(Math.max(m.h + dy, m.minH), c.bottom - m.y);
+      if (!m.to) m.to = [m.w, m.h];
+      m.to[0] += dx;
+      m.to[1] += dy;
+      m.w = Math.min(Math.max(m.to[0], m.minW), c.right - m.x);
+      m.h = Math.min(Math.max(m.to[1], m.minH), c.bottom - m.y);
       m.sized = true;
       this.sizeDialog(n);
-    });
+    }, () => { n.mv.to = null; });
   }
 
   sizeDialog(n) {
@@ -1692,6 +1702,7 @@ const sheet = {
     if (p === P.Sheet.Window) n.winID = v; // the window it's declared in: the root's, a Window's
     if (p === P.Sheet.FullScreen) n.fullScreen = !!v; // before Present
     if (p === P.Sheet.Movable) n.movable = !!v; // before Present
+    if (p === P.Sheet.Resizable) n.resizable = !!v; // before Present
     if (p === P.Sheet.Routed) n.routed = !!v; // a Router's: the history goes back from it
   },
   frame() { return true; },

@@ -624,34 +624,45 @@ component Notes {
 
 ### Movable sheets
 
-`movable: true` makes a sheet on a desktop a dialog the user can move
-and resize, as a desktop's modal dialogs are, rather than a sheet
-attached to the window: for a detail or a form the user wants to look at
-beside what's under it, or larger. It's as modal as a sheet: what's
+`movable: true` makes a sheet on a desktop a dialog the user can move,
+as a desktop's modal dialogs are, rather than a sheet attached to the
+window: for a detail or a form the user wants to look at beside what's
+under it. It's as modal as a sheet: what's
 behind it takes no input until it closes, and Escape dismisses it; a
 click outside it doesn't. It has no title bar: its content is all of it,
 its own header its top (give it a Close), and the user moves it by its
 background, anywhere that isn't a control, a pressable view or text to
 select. It opens
-centered over its window at the size `detents` gives (`.fit`: its
-content's, which is then the least the user can size it to); after
-that its size is its window's, which its content fills, as a dialog
-doesn't resize itself as its content changes.
+centered over its window at the size `detents` gives; a `.fit` one is
+as big as its content and follows it as it changes, as any `.fit` sheet.
+`resizable: true` lets the user resize it too, for content that's
+worth seeing larger, such as a long report: a movable sheet isn't
+resizable without it, as a desktop's dialogs aren't (a `Window` is
+resizable unless it says `resizable: false`). A resizable `.fit` sheet
+opens at its content's size, which is then the least the user can size
+it to, and after that keeps the size the user gives it, which its
+content fills.
 
 ```asuka
-Sheet {
-  bind open: showing
-  detents: [.fit]
-  movable: true
-  ReportText(report)
+component Report {
+  state showing = false
+  prop report = ""
+
+  Sheet {
+    bind open: showing
+    detents: [.fit]
+    movable: true
+    resizable: true
+    Scroll { Text(report) { selectable: true } }
+  }
 }
 ```
 
 | | A movable sheet |
 |---|---|
-| macOS | a window of its own without a title bar (its window's shadow, corners and resizing), centered over its window and in front of it, fading in where it opens; its window takes no presses, scrolls or hovers meanwhile, and ⌘W closes it |
+| macOS | a window of its own without a title bar (its window's shadow and corners; resizable at its edges with `resizable`), centered over its window and in front of it, fading in where it opens; its window takes no presses, scrolls or hovers meanwhile, and ⌘W closes it |
 | Windows | a modal window over the window in use, which a sheet already is |
-| The web | a card over a backdrop on a wide window, fading in where it opens, resized by its corner |
+| The web | a card over a backdrop on a wide window, fading in where it opens; resized by its corner with `resizable` |
 | iOS, Android, Linux | a sheet as without it: a phone's sheet isn't moved, and libadwaita's dialogs aren't |
 
 A `fullScreen` sheet ignores it.

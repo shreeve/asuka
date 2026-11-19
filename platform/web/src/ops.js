@@ -114,7 +114,7 @@ export const KindProp = Object.freeze({
   Stack: Object.freeze({ Routed: 64 }),
   Screen: Object.freeze({ Title: 64, Actions: 65, BackGesture: 66, Icon: 67, Search: 68, SearchText: 69, SearchButton: 70, ZoomFrom: 71, LargeTitle: 72, BarColor: 73, Toolbar: 74, Primary: 75, PrimaryExtended: 76, Badge: 77 }),
   Tabs: Object.freeze({ Selected: 64 }),
-  Sheet: Object.freeze({ Detents: 64, Grabber: 65, Window: 66, FullScreen: 67, Routed: 68, Movable: 69 }),
+  Sheet: Object.freeze({ Detents: 64, Grabber: 65, Window: 66, FullScreen: 67, Routed: 68, Movable: 69, Resizable: 70 }),
   Alert: Object.freeze({ Title: 64, Message: 65, Buttons: 66, Style: 67, Window: 68, Fields: 69 }),
   Image: Object.freeze({ Source: 64, Mode: 65, Placeholder: 66, PlaceholderImage: 67, PlaceholderMode: 68, Transition: 69, Paused: 70 }),
   Native: Object.freeze({ Type: 64, Prop: 65 }),

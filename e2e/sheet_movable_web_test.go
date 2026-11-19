@@ -10,12 +10,13 @@ import (
 )
 
 // TestSheetMovableWeb runs e2e/testdata/sheetmovable in headless Chrome,
-// on a wide page, with DevTools' trusted mouse events: a movable sheet is
-// a modal dialog centered over the page with no bar, its content all of
-// it, and a resize corner; dragging its background moves it, dragging the
-// corner resizes it (its environment its size); a click on the page
-// behind it neither reaches the page nor dismisses it; its own button
-// does.
+// on a wide page, with DevTools' trusted mouse events: a movable,
+// resizable sheet is a modal dialog centered over the page with no bar,
+// its content all of it, and a resize corner; dragging its background
+// moves it, dragging the corner resizes it (its environment its size); a
+// click on the page behind it neither reaches the page nor dismisses it;
+// its own button does. A movable sheet that isn't resizable has no
+// corner.
 func TestSheetMovableWeb(t *testing.T) {
 	browser := chrome()
 	if browser == "" {
@@ -125,4 +126,13 @@ func TestSheetMovableWeb(t *testing.T) {
 	if r := c.eval(t, page, `String(!!document.querySelector("dialog.asuka-movable"))`); !strings.Contains(r, "false") {
 		t.Fatalf("its dialog is still in the page: %s", r)
 	}
+
+	// Not resizable: no corner to resize it by.
+	click(center("Show fixed"))
+	rect("dialog.asuka-movable")
+	if r := c.eval(t, page, `String(document.querySelectorAll("dialog.asuka-movable .asuka-window-grip").length)`); !strings.Contains(r, "0") {
+		t.Fatalf("a resize corner on a sheet that isn't resizable: %s", r)
+	}
+	click(center("Done fixed"))
+	showsLine(t, s, "open false taps 1")
 }

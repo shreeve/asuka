@@ -375,6 +375,7 @@ typedef struct ak_prov {
 	bool full_width;
 	bool fit_sheet;  // a sheet as tall as its content (Detent fit)
 	bool fit_wait;   // a fit sheet waits for its room (its first Environment)
+	bool fit_once;   // a movable fit sheet: its content's size as it opens, then the host's (the user's)
 	bool fit_win;    // a window sized to its content
 	bool fit_sent;
 	// An enclosing provider whose environment it takes, as that changes,

@@ -112,6 +112,7 @@ ak_view *ak_sheet_present(ak_ui_root *r, ak_owner *owner, ak_closure *build, ak_
 	ak_prov *pv = ak_prov_new(r);
 	pv->fit_sheet = !full && (detents & 4) && r->env.platform == AK_PLATFORM_MACOS;
 	pv->fit_wait = pv->fit_sheet;
+	pv->fit_once = pv->fit_sheet && movable;
 	ak_prov_attach(e, pv);
 	ak_release(pv);
 	e->up = up;

@@ -629,10 +629,11 @@ and resize, as a desktop's modal dialogs are, rather than a sheet
 attached to the window: for a detail or a form the user wants to look at
 beside what's under it, or larger. It's as modal as a sheet: what's
 behind it takes no input until it closes, and Escape dismisses it, as
-does its own close button; a click outside it doesn't. `detents` gives
-its size as it opens (`.fit`: its content's height), centered over its
-window; once the user resizes it, the user's size stays, and its content
-follows it.
+does its own close button; a click outside it doesn't. It opens
+centered over its window at the size `detents` gives (`.fit`: its
+content's, which is then the least the user can size it to); after
+that its size is its window's, which its content fills, as a dialog
+doesn't resize itself as its content changes.
 
 ```asuka
 Sheet {

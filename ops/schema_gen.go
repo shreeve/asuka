@@ -323,7 +323,7 @@ const (
 	PropSheetFullScreen PropID = 67
 	// PropSheetRouted: a Router's sheet, a route of its own: as Stack's Routed, the web keeps no back entry of its own for it.
 	PropSheetRouted PropID = 68
-	// PropSheetMovable: a desktop's sheet the user can move and resize, sent before Present: a Mac's a modal window over its window (which takes no input meanwhile) rather than a sheet attached to it, popping in from its center; the web's a panel the user can move and resize over a backdrop; Windows' modal window already is one. A phone's sheet, Linux's dialog and a FullScreen sheet ignore it. A fit sheet (Detents 4) opens at its content's size; once the user resizes it, the user's size stays.
+	// PropSheetMovable: a desktop's sheet the user can move and resize, sent before Present: a Mac's a modal window over its window (which takes no input meanwhile) rather than a sheet attached to it, popping in from its center; the web's a panel the user can move and resize over a backdrop; Windows' modal window already is one. A phone's sheet, Linux's dialog and a FullScreen sheet ignore it. A fit sheet (Detents 4) opens at its content's size (the core sends one Fit), the least the user sizes it to; after it the host sizes it, as a sheet that isn't fit.
 	PropSheetMovable PropID = 69
 )
 

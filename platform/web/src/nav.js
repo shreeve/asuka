@@ -524,7 +524,7 @@ export class Navigation {
     this.h.container.appendChild(d);
     // Movable on a wide window: a bar to move it by, with its close
     // button, and a corner to resize it by, as a Window's panel.
-    n.mv = n.movable && !n.fullScreen && this.wide() ? { x: 0, y: 0, w: 0, h: 0, bar: 36, moved: false, sized: false } : null;
+    n.mv = n.movable && !n.fullScreen && this.wide() ? { x: 0, y: 0, w: 0, h: 0, minW: 240, minH: 120, bar: 36, moved: false, sized: false } : null;
     if (n.mv) this.movableParts(n, d);
     d.appendChild(n.el);
     if (n.grabber && !n.fullScreen) {
@@ -566,8 +566,8 @@ export class Navigation {
     d.append(grip);
     this.drag(grip, (dx, dy) => {
       const m = n.mv, c = this.h.container.getBoundingClientRect();
-      m.w = Math.min(Math.max(m.w + dx, 240), c.right - m.x);
-      m.h = Math.min(Math.max(m.h + dy, 120), c.bottom - m.y - m.bar);
+      m.w = Math.min(Math.max(m.w + dx, m.minW), c.right - m.x);
+      m.h = Math.min(Math.max(m.h + dy, m.minH), c.bottom - m.y - m.bar);
       m.sized = true;
       this.sizeDialog(n);
     });

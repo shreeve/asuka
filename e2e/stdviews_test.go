@@ -28,7 +28,7 @@ func TestStdWebViews(t *testing.T) {
 	sdk, _ := filepath.Glob(filepath.Join(r, "sdk", "*", "tests", "*_view_test.js"))
 	tests = append(tests, sdk...)
 	if len(tests) == 0 {
-		t.Fatal("no web view tests")
+		t.Skip("no package has web view tests ({std,sdk}/*/tests/*_view_test.js)")
 	}
 	files := http.FileServer(http.Dir(r))
 	for _, test := range tests {

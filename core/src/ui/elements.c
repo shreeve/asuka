@@ -667,7 +667,7 @@ static void choice_event(ak_view *e, const ak_event *ev) {
 
 static const ak_el_class cls_segmented = {.name = "Segmented", .kind = AK_KIND_SEGMENTED, .flags = AK_ELF_MEASURED, .init = value_init,
                                           .set = choice_set, .finalize = segmented_finalize, .event = choice_event, .drop = value_drop};
-static const ak_el_class cls_picker = {.name = "Picker", .kind = AK_KIND_PICKER, .flags = AK_ELF_MEASURED, .init = value_init,
+static const ak_el_class cls_picker = {.name = "Picker", .kind = AK_KIND_PICKER, .flags = AK_ELF_TEXT | AK_ELF_MEASURED, .init = value_init,
                                        .set = choice_set, .finalize = picker_finalize, .event = choice_event, .drop = value_drop};
 
 // ---- Wheel, ColorPicker, DatePicker ----

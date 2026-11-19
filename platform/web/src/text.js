@@ -106,7 +106,3 @@ export function linesWidth(el) {
   r.selectNodeContents(el);
   return r.getBoundingClientRect().width;
 }
-
-export function horizontalInset(n) {
-  return n.inset ? n.inset[1] + n.inset[3] : 0;
-}

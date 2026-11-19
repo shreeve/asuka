@@ -685,7 +685,8 @@ export class Navigation {
       m.to[1] += dy;
       m.w = Math.min(Math.max(m.to[0], m.minW), c.right - m.x);
       m.h = Math.min(Math.max(m.to[1], m.minH), c.bottom - m.y);
-      m.sized = true;
+      // Its corner moves, its other edges stay: no longer centered.
+      m.sized = m.moved = true;
       this.sizeDialog(n);
     }, () => { n.mv.to = null; });
   }

@@ -11,10 +11,11 @@ import (
 
 // TestSheetMovableWeb runs e2e/testdata/sheetmovable in headless Chrome,
 // on a wide page, with DevTools' trusted mouse events: a movable sheet is
-// a modal dialog centered over the page with a bar and a resize corner, as
-// a Window's panel; dragging the bar moves it, dragging the corner resizes
-// it (its environment its content's size); a click on the page behind it
-// neither reaches the page nor dismisses it; its bar's close button does.
+// a modal dialog centered over the page with no bar, its content all of
+// it, and a resize corner; dragging its background moves it, dragging the
+// corner resizes it (its environment its size); a click on the page
+// behind it neither reaches the page nor dismisses it; its own button
+// does.
 func TestSheetMovableWeb(t *testing.T) {
 	browser := chrome()
 	if browser == "" {
@@ -90,28 +91,34 @@ func TestSheetMovableWeb(t *testing.T) {
 	if d := (y + h/2) - 350; d > 1 || d < -1 {
 		t.Fatalf("not centered down the page: %v %v %v %v", x, y, w, h)
 	}
-	// Its environment is its content's size: the dialog less its bar.
-	showsLine(t, s, fmt.Sprintf("sheet %dx%d", int(w), int(h)-36))
+	// No bar: its content is all of it, its environment its size.
+	if r := c.eval(t, page, `String(document.querySelectorAll("dialog.asuka-movable .asuka-window-bar").length)`); !strings.Contains(r, "0") {
+		t.Fatalf("a bar over its content: %s", r)
+	}
+	showsLine(t, s, fmt.Sprintf("sheet %dx%d", int(w), int(h)))
 
-	// Dragged by its bar, it moves.
-	drag(x+w/2, y+18, -120, 40)
+	// Dragged by its background, it moves.
+	drag(x+w-12, y+12, -120, 40)
 	until(t, func() bool { nx, ny, _, _ := rect("dialog.asuka-movable"); return nx == x-120 && ny == y+40 },
 		func() string { nx, ny, nw, nh := rect("dialog.asuka-movable"); return fmt.Sprint(nx, ny, nw, nh) })
 	x, y = x-120, y+40
 	// Dragged by its corner, it resizes, and its content with it.
 	drag(x+w-6, y+h-6, 60, -100)
-	showsLine(t, s, fmt.Sprintf("sheet %dx%d", int(w)+60, int(h)-36-100))
+	showsLine(t, s, fmt.Sprintf("sheet %dx%d", int(w)+60, int(h)-100))
 
 	// A click on the page behind it reaches nothing and leaves it open
 	// (the count, read once it's closed, says the first).
 	cx, cy := center("Count")
+	if cx >= x {
+		// Where the page shows beside it: Count stretches across the page.
+		cx = 20
+	}
 	click(cx, cy)
 	if _, _, w2, _ := rect("dialog.asuka-movable"); w2 != w+60 {
 		t.Fatalf("a click outside changed it: width %v", w2)
 	}
-	// Its bar's close button dismisses it; the page takes clicks again.
-	bx, by, bw, bh := rect("dialog.asuka-movable .asuka-window-bar button")
-	click(bx+bw/2, by+bh/2)
+	// Its own button dismisses it; the page takes clicks again.
+	click(center("Done"))
 	showsLine(t, s, "open false taps 0")
 	click(cx, cy)
 	showsLine(t, s, "open false taps 1")

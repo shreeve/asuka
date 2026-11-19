@@ -16,9 +16,9 @@
 //     FullScreen one covers the whole page (a Window's panel's content,
 //     for one declared in a Window), sliding up; only Escape (or going
 //     back) dismisses it. A Movable one on a wide window is a card the
-//     user can move by its bar and resize by its corner, as a Window's
-//     panel, centered over the page until moved; Escape and its bar's
-//     close button dismiss it, a click outside doesn't.
+//     user can move by its background and resize by its corner, with no
+//     bar (its own header its top), centered over the page until moved;
+//     Escape dismisses it, a click outside doesn't.
 //   - An Alert is a modal <dialog> too; an action sheet's buttons a list.
 //   - A Popover is a popover element next to what it points at.
 //   - A SplitView is a sidebar beside its detail Stack; on a narrow
@@ -522,9 +522,9 @@ export class Navigation {
     const d = document.createElement("dialog");
     d.className = n.fullScreen ? "asuka-sheet-dialog asuka-full-screen" : "asuka-sheet-dialog";
     this.h.container.appendChild(d);
-    // Movable on a wide window: a bar to move it by, with its close
-    // button, and a corner to resize it by, as a Window's panel.
-    n.mv = n.movable && !n.fullScreen && this.wide() ? { x: 0, y: 0, w: 0, h: 0, minW: 240, minH: 120, bar: 36, moved: false, sized: false } : null;
+    // Movable on a wide window: no bar, its content all of it (its own
+    // header its top), moved by its background, resized by its corner.
+    n.mv = n.movable && !n.fullScreen && this.wide() ? { x: 0, y: 0, w: 0, h: 0, minW: 240, minH: 120, moved: false, sized: false } : null;
     if (n.mv) this.movableParts(n, d);
     d.appendChild(n.el);
     if (n.grabber && !n.fullScreen) {
@@ -548,28 +548,32 @@ export class Navigation {
     this.updateGuard();
   }
 
-  /** movableParts gives a movable sheet's dialog its bar (moving it, closing it) and its resize corner. */
+  /** movableParts makes a movable sheet's dialog move by its background and resize by its corner. */
   movableParts(n, d) {
     d.classList.add("asuka-movable");
-    const bar = div("asuka-window-bar");
-    const close = iconButton("xmark", "Close", false);
-    close.addEventListener("click", () => this.dismiss(n));
-    bar.append(div("asuka-window-title"), close);
-    d.append(bar);
-    this.drag(bar, (dx, dy) => {
+    // Its background: inside it (a press on the backdrop is the dialog's
+    // too), not a control, a pressable view, selectable text or a scroll
+    // bar, which keep their own presses.
+    const background = (e) => {
+      const t = e.target, r = d.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX >= r.right || e.clientY < r.top || e.clientY >= r.bottom) return false;
+      if (!(t instanceof Element) || t.closest("button, input, select, textarea, a, [contenteditable], .asuka-pressable, .asuka-selectable, .asuka-window-grip")) return false;
+      return !(t.clientWidth && e.offsetX > t.clientWidth) && !(t.clientHeight && e.offsetY > t.clientHeight);
+    };
+    this.drag(d, (dx, dy) => {
       const m = n.mv, c = this.h.container.getBoundingClientRect();
-      // Its bar stays where the pointer can take it again.
+      // It stays where the pointer can take it again.
       m.x = Math.min(Math.max(m.x + dx, c.left + 80 - m.w), c.right - 80);
-      m.y = Math.min(Math.max(m.y + dy, c.top), c.bottom - m.bar);
+      m.y = Math.min(Math.max(m.y + dy, c.top), c.bottom - 40);
       m.moved = true;
       this.sizeDialog(n);
-    });
+    }, null, background);
     const grip = div("asuka-window-grip");
     d.append(grip);
     this.drag(grip, (dx, dy) => {
       const m = n.mv, c = this.h.container.getBoundingClientRect();
       m.w = Math.min(Math.max(m.w + dx, m.minW), c.right - m.x);
-      m.h = Math.min(Math.max(m.h + dy, m.minH), c.bottom - m.y - m.bar);
+      m.h = Math.min(Math.max(m.h + dy, m.minH), c.bottom - m.y);
       m.sized = true;
       this.sizeDialog(n);
     });
@@ -605,20 +609,20 @@ export class Navigation {
     } else if (n.kind === Kind.Sheet && n.mv) {
       // A movable sheet: a wide sheet's size until the user resizes it,
       // centered over the page (its Window's panel's content) until the
-      // user moves it; its bar above its content.
+      // user moves it.
       const m = n.mv, w0 = this.panelOf(n);
       const a = w0 ? this.panelArea(w0, c) : { x: c.left, y: c.top, w: c.width, h: c.height };
       d.classList.add("asuka-wide", "asuka-on-window");
       if (!m.sized) {
         m.w = Math.min(c.width - 80, 560);
-        m.h = Math.min(c.height - 80, n.detents === 1 ? Math.max(c.height / 2, 320) : 720) - m.bar;
+        m.h = Math.min(c.height - 80, n.detents === 1 ? Math.max(c.height / 2, 320) : 720);
       }
       if (!m.moved) {
         m.x = Math.round(a.x + (a.w - m.w) / 2);
-        m.y = Math.round(Math.max(a.y + (a.h - m.h - m.bar) / 2, c.top + 8));
+        m.y = Math.round(Math.max(a.y + (a.h - m.h) / 2, c.top + 8));
       }
       w = m.w;
-      h = m.h + m.bar;
+      h = m.h;
       d.style.left = m.x + "px";
       d.style.top = m.y + "px";
     } else if ((n.kind === Kind.Sheet) && this.panelOf(n)) {
@@ -653,7 +657,7 @@ export class Navigation {
     d.style.width = w + "px";
     d.style.height = h + "px";
     const s = n.el.style;
-    const top = n.kind === Kind.Window ? n.win.bar : n.mv ? n.mv.bar : 0;
+    const top = n.kind === Kind.Window ? n.win.bar : 0;
     if (n.kind === Kind.Window && n.win.minimized) {
       this.h.windows.report(n);
       return;
@@ -1099,10 +1103,10 @@ export class Navigation {
     if (!placed) for (const el of els) c.appendChild(el);
   }
 
-  drag(handle, move, end) {
+  drag(handle, move, end, from) {
     let last = null;
     handle.addEventListener("pointerdown", (e) => {
-      if (e.target.closest("button")) return;
+      if (e.button !== 0 || e.target.closest("button") || (from && !from(e))) return;
       last = [e.clientX, e.clientY];
       handle.setPointerCapture(e.pointerId);
     });

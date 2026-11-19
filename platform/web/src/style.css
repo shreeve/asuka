@@ -451,7 +451,10 @@ textarea.asuka-field { overflow-y: auto; display: block; }
 
 /* Sheets, alerts, popovers, menus, windows */
 
-.asuka dialog { color: var(--asuka-label); font: inherit; }
+.asuka dialog { color: var(--asuka-label); font: inherit; user-select: none; -webkit-user-select: none; }
+/* A dialog takes the keyboard as it opens, and a press on its background
+   keeps it there; its controls show where the keyboard is, not it. */
+.asuka dialog:focus, .asuka dialog:focus-visible { outline: none; }
 .asuka-sheet-dialog {
   position: fixed;
   inset: auto 0 0 0;

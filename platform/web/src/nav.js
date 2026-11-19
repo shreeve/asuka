@@ -88,7 +88,7 @@ export class Navigation {
     this.routes = null; // the main window's Router's address (history.js)
     addEventListener("popstate", (e) => this.popstate(e));
     addEventListener("keydown", (e) => this.key(e));
-    addEventListener("pointerdown", (e) => this.pressOutside(e), true);
+    addEventListener("pointerdown", (e) => { this.pressed = e.target; this.pressOutside(e); }, true);
     this.edgeSwipe();
   }
 
@@ -1224,9 +1224,42 @@ export class Navigation {
       return;
     }
     if (escape && e.target.closest?.("input, textarea")) { e.target.blur(); return; }
+    if (e.key.toLowerCase() === "a" && (mac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey) && !e.altKey && !e.shiftKey &&
+        this.selectAll(e.target)) {
+      e.preventDefault();
+      return;
+    }
     if (backKey || escape) {
       if (this.back()) e.preventDefault();
     }
+  }
+
+  /**
+   * selectAll selects all of one selectable text, as select all (Cmd+A,
+   * Ctrl+A) does in a desktop's text view, rather than the page or the
+   * dialog with its title and buttons: the one the selection is in, else
+   * the one last pressed, else the only one in the frontmost dialog (the
+   * page). It says whether it did; not in a text field, which selects
+   * its own text.
+   */
+  selectAll(target) {
+    if (!(target instanceof Element) || target.closest("input, textarea, select, [contenteditable]")) return false;
+    const top = [...this.dialogs].reverse().find((d) => d.dialog?.isConnected)?.dialog;
+    const scope = top || this.h.container;
+    const within = (x) => {
+      const el = x instanceof Element ? x : x?.parentElement;
+      const t = el?.closest(".asuka-selectable");
+      return t && scope.contains(t) ? t : null;
+    };
+    const all = scope.querySelectorAll(".asuka-selectable");
+    const t = within(getSelection()?.anchorNode) || within(this.pressed) || (all.length === 1 ? all[0] : null);
+    if (!t) return false;
+    const r = document.createRange();
+    r.selectNodeContents(t);
+    const sel = getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+    return true;
   }
 
   /**

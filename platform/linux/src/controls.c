@@ -410,10 +410,14 @@ static void date_changed(node *n) {
 // A GtkDropDown over a GtkStringList of its items, as GNOME's apps choose
 // one of many. GTK shows nothing while none is chosen, so its label is a
 // dim label over the drop-down's button where the chosen item would be,
-// shown only then; it names the drop-down for screen readers too.
+// shown only then; it names the drop-down for screen readers too. The
+// button shows the chosen item in a label of the picker's own (its
+// factory); it and the dim label are in the picker's font when it sets
+// one. The list keeps GTK's rows.
 
 typedef struct {
 	GtkWidget *drop, *label;
+	GtkWidget *shown;  // the button's label, while it has one
 } picker;
 
 #define PICKER_PAD 10  // where Adwaita's button puts its content: its padding
@@ -422,6 +426,48 @@ typedef struct {
 static void free_picker(node *n) {
 	free(n->ext);
 	n->ext = NULL;
+}
+
+// style_picker_label sets a picker's label in its font when it sets one,
+// in the theme's otherwise; its color stays the theme's.
+static void style_picker_label(node *n, GtkWidget *l) {
+	if (!(n->font_size > 0 || n->text_style || n->font_weight || !str_empty(n->font_family))) {
+		gtk_label_set_attributes((GtkLabel *)l, NULL);
+		return;
+	}
+	PangoAttrList *a = lx_attrs(n, false);
+	gtk_label_set_attributes((GtkLabel *)l, a);
+	pango_attr_list_unref(a);
+}
+
+// lx_style_picker sets a picker's labels in its font: the one its
+// drop-down's button shows the chosen item in, and the dim one.
+void lx_style_picker(node *n) {
+	picker *pk = n->ext;
+	if (n->kind != AK_KIND_PICKER || !pk) return;
+	if (pk->shown) style_picker_label(n, pk->shown);
+	style_picker_label(n, pk->label);
+}
+
+// The button's factory: a label, its text the item's, in the picker's
+// font.
+static void on_picker_setup(GObject *f, GtkListItem *it, node *n) {
+	GtkWidget *l = gtk_label_new(NULL);
+	gtk_label_set_xalign((GtkLabel *)l, 0);
+	gtk_list_item_set_child(it, l);
+	((picker *)n->ext)->shown = l;
+}
+
+static void on_picker_bind(GObject *f, GtkListItem *it, node *n) {
+	GtkWidget *l = gtk_list_item_get_child(it);
+	GtkStringObject *s = gtk_list_item_get_item(it);
+	gtk_label_set_text((GtkLabel *)l, s ? gtk_string_object_get_string(s) : "");
+	style_picker_label(n, l);
+}
+
+static void on_picker_teardown(GObject *f, GtkListItem *it, node *n) {
+	picker *pk = n->ext;
+	if (pk && pk->shown == gtk_list_item_get_child(it)) pk->shown = NULL;
 }
 
 static void select_picker(node *n, picker *pk) {
@@ -465,6 +511,13 @@ bool lx_create_picker(node *n) {
 	n->selected = -1;  // none, till the core says
 	n->ext = pk;
 	n->ext_free = free_picker;
+	GtkListItemFactory *f = gtk_signal_list_item_factory_new();
+	lx_connect(n, f, "setup", G_CALLBACK(on_picker_setup));
+	lx_connect(n, f, "bind", G_CALLBACK(on_picker_bind));
+	lx_connect(n, f, "teardown", G_CALLBACK(on_picker_teardown));
+	gtk_drop_down_set_list_factory((GtkDropDown *)pk->drop, gtk_drop_down_get_factory((GtkDropDown *)pk->drop));
+	gtk_drop_down_set_factory((GtkDropDown *)pk->drop, f);
+	g_object_unref(f);
 	lx_set_inner(n, ov);
 	lx_connect(n, pk->drop, "notify::selected", G_CALLBACK(on_picked));
 	return true;

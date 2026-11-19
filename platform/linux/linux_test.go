@@ -249,6 +249,37 @@ func TestOverlays(t *testing.T) {
 	shows(t, d["drafts"], "drafts", []string{"Draft list"}, "Fruit 1")
 }
 
+// A Picker takes its font: one in a 30-point font is taller and wider
+// than the same Picker in the theme's.
+func TestPickerFont(t *testing.T) {
+	onLinux(t)
+	dir := t.TempDir()
+	exe := filepath.Join(dir, "app")
+	buildApp(t, `
+component Pickers {
+  Column {
+    gap: 8; padding: 16; align: .start
+    Picker(["One", "Two"]) { selected: 0 }
+    Picker(["One", "Two"]) { selected: 0; font: Font(size: 30) }
+  }
+}
+app { Pickers() }
+`, exe)
+	d := script(t, dir, exe, "snap:start")
+	var p []dumpNode
+	for _, n := range parseDump(t, d["start"]) {
+		if n.kind == "Picker" {
+			p = append(p, n)
+		}
+	}
+	if len(p) != 2 {
+		t.Fatalf("not two pickers:\n%s", d["start"])
+	}
+	if p[1].h < p[0].h+10 || p[1].w <= p[0].w {
+		t.Errorf("the 30-point picker (%vx%v) isn't larger than the theme's (%vx%v):\n%s", p[1].w, p[1].h, p[0].w, p[0].h, d["start"])
+	}
+}
+
 // A WebView (testdata/web.asuka): WebKitGTK's page posting to the app,
 // loaded, and a Video that fails.
 func TestWebView(t *testing.T) {

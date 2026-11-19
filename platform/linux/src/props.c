@@ -438,6 +438,9 @@ void lx_apply_text(node *n) {
 	case AK_KIND_TEXT_FIELD:
 		lx_style_field(n);
 		break;
+	case AK_KIND_PICKER:
+		lx_style_picker(n);
+		break;
 	default:
 		apply_text_more(n);
 	}

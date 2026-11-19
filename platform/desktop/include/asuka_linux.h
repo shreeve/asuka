@@ -762,6 +762,8 @@ typedef struct _GtkProgressBar GtkProgressBar;
 typedef struct _GtkDropDown GtkDropDown;
 typedef struct _GtkStringList GtkStringList;
 typedef struct _GtkStringObject GtkStringObject;
+typedef struct _GtkListItem GtkListItem;
+typedef struct _GtkListItemFactory GtkListItemFactory;
 typedef struct _GtkColorDialog GtkColorDialog;
 typedef struct _GtkColorDialogButton GtkColorDialogButton;
 typedef struct _GtkCalendar GtkCalendar;

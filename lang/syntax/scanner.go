@@ -349,12 +349,14 @@ func (s *Scanner) lineIndent(offset int) int {
 }
 
 // nextLine finds the next line after from that isn't blank or only a
-// comment: its indentation, the offset of its first character, and
-// whether there is one. A tab in that indentation is an error.
-func (s *Scanner) nextLine(from int) (indent, first int, ok bool) {
+// comment: its indentation, the offset of its first character, the
+// offset of the first tab in its indentation (-1 if none), and whether
+// there is one.
+func (s *Scanner) nextLine(from int) (indent, first, tab int, ok bool) {
 	src, i := s.src, from
 	for i < len(src) {
-		start, n, tab := i, 0, -1
+		n := 0
+		tab = -1
 		for i < len(src) && (src[i] == ' ' || src[i] == '\t') {
 			if src[i] == '\t' && tab < 0 {
 				tab = i
@@ -364,7 +366,7 @@ func (s *Scanner) nextLine(from int) (indent, first int, ok bool) {
 		}
 		switch {
 		case i >= len(src):
-			return 0, i, false
+			return 0, i, -1, false
 		case src[i] == '\n' || src[i] == '\r':
 			i++
 			continue
@@ -374,13 +376,57 @@ func (s *Scanner) nextLine(from int) (indent, first int, ok bool) {
 			}
 			continue
 		}
-		_ = start
-		if tab >= 0 {
-			s.error(tab, diag.Indentation, "a tab in a line's indentation: indent with spaces")
-		}
-		return n, i, true
+		return n, i, tab, true
 	}
-	return 0, i, false
+	return 0, i, -1, false
+}
+
+// lineTab is the offset of the first tab in the indentation of the line
+// holding offset, or -1 if there is none.
+func (s *Scanner) lineTab(offset int) int {
+	for i := strings.LastIndexByte(s.src[:offset], '\n') + 1; i < len(s.src) && (s.src[i] == ' ' || s.src[i] == '\t'); i++ {
+		if s.src[i] == '\t' {
+			return i
+		}
+	}
+	return -1
+}
+
+// tabs reports a tab in the indentation of a line inside an indented
+// block, which is written with spaces; elsewhere a tab is whitespace in
+// braced code, as in a program inside a Go string.
+func (s *Scanner) tabs(tab int) {
+	if tab >= 0 {
+		s.error(tab, diag.Indentation, "a tab in an indented block's indentation: indent with spaces")
+	}
+}
+
+// opensAt reports whether the next line, indented by indent, starting at
+// first and with its first tab at tab (-1: none), opens a block after the
+// line holding off: the statement starts its line, the next line is
+// deeper, neither line is indented with a tab (tabs are braced code's,
+// as in a program inside a Go string), and the line doesn't end with a
+// block the statement already has. Where no block can follow, a deeper
+// line is only indented, as existing braced code may be.
+func (s *Scanner) opensAt(off, indent, first, tab int) bool {
+	if !s.stmtFirst || indent <= s.stmtIndent || tab >= 0 || s.lineTab(off) >= 0 || !s.opens(first) {
+		return false
+	}
+	if s.last == RBRACE {
+		// After a { } on the line, only a statement whose head is followed
+		// by an expression can still take its block (if let p = spawn { … });
+		// an element's or a declaration's one-line block was its block
+		line := s.src[strings.LastIndexByte(s.src[:off], '\n')+1 : off]
+		if strings.HasPrefix(strings.TrimLeft(line, " \t"), "}") {
+			return false
+		}
+		switch s.headTok {
+		case IF, FOR, WHILE, MATCH:
+			return true
+		}
+		return false
+	}
+	return true
 }
 
 // indentedTop reports whether the innermost frame is a block opened by
@@ -402,23 +448,29 @@ func (s *Scanner) inBlock() bool {
 // the } of each indented block the next line closes (queued after it).
 func (s *Scanner) lineEnd(off int) (Pos, Token, string) {
 	pos := s.file.Pos(off)
-	indent, first, ok := s.nextLine(off + 1)
+	indent, first, tab, ok := s.nextLine(off + 1)
 	if !ok {
 		return pos, NEWLINE, "\n" // the end of the file closes them (Scan)
 	}
-	if s.stmtFirst && indent > s.stmtIndent && s.opens(first) {
+	if s.opensAt(off, indent, first, tab) {
 		s.frames = append(s.frames, frame{kind: brace, indented: true, indent: indent, outer: s.stmtIndent})
 		return pos, LBRACE, ""
 	}
 	s.dedent(pos, indent, first)
+	if s.indentedTop() {
+		s.tabs(tab)
+	}
 	return pos, NEWLINE, "\n"
 }
 
 // opens reports whether a deeper line starting at first opens a block:
-// not one that starts with .name (it continues the line before), but
-// after a statement that holds a match (it's the first arm: match x,
+// not one that starts with } (it closes a braced block) or .name (it
+// continues the line before), but after a statement that holds a match (it's the first arm: match x,
 // let y = match x).
 func (s *Scanner) opens(first int) bool {
+	if s.src[first] == '}' {
+		return false
+	}
 	if s.src[first] == '.' && first+1 < len(s.src) && isLetter(rune(s.src[first+1])) {
 		return s.stmtMatch
 	}
@@ -498,7 +550,7 @@ redo:
 			}
 			if s.last == ELSE && s.inBlock() {
 				// else at a line's end: a deeper line is its block
-				if indent, first, ok := s.nextLine(s.offset + 1); ok && s.stmtFirst && indent > s.stmtIndent && s.opens(first) {
+				if indent, first, tab, ok := s.nextLine(s.offset + 1); ok && s.opensAt(s.offset, indent, first, tab) {
 					off := s.offset
 					s.next()
 					s.frames = append(s.frames, frame{kind: brace, indented: true, indent: indent, outer: s.stmtIndent})
@@ -832,7 +884,7 @@ func (s *Scanner) digits(ok func(rune) bool) {
 	}
 }
 
-// char scans a char literal at s.ch == '\'': one code point, or an
+// char scans a char literal at s.ch == '\”: one code point, or an
 // escape (\n, \', \u{1F600}), between single quotes. What's more is an
 // error, as is an empty one: a string holds more (or none).
 func (s *Scanner) char(start int) (Pos, Token, string) {

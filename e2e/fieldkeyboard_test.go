@@ -60,6 +60,62 @@ func TestFieldAboveKeyboardIOS(t *testing.T) {
 	}, func() string { return line + ", want a keyboard and the field above it" })
 }
 
+// Focus moving from one field to another, each with its own bar on the
+// keyboard (an accessory), leaves the keyboard's height as it is. UIKit
+// swaps the bars, and the keyboard it reports shrinks by the old one's,
+// then grows by the new one's, a turn or two later: followed, what sits on
+// the keyboard drops and comes back up.
+func TestFieldAccessoriesIOS(t *testing.T) {
+	s := iosApp(t, "e2e/testdata/field-accessories", "dev.asuka.fieldaccessories")
+	waitFor(t, s, []string{"ready", "keyboard down"})
+	s.tap("Focus first")
+	// With a hardware keyboard connected, UIKit shows none: nothing to test.
+	deadline := time.Now().Add(within)
+	for !hasAll(s.texts(), []string{"keyboard up", "Done first"}) {
+		if time.Now().After(deadline) {
+			t.Skip("no keyboard shown (a hardware keyboard is connected)")
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	// The keyboard's coming up over (a move during it has nothing to drop):
+	// like the pause below, it can let the bug by, never fail the fix.
+	time.Sleep(time.Second)
+	// The second field's bar on the keyboard in place of the first's, then
+	// the few frames in which UIKit reports the old bar gone and the new one
+	// come: nothing is waited for that has to come, so a pass doesn't race.
+	s.tap("Focus second")
+	waitFor(t, s, []string{"Done second"}, "Done first")
+	time.Sleep(300 * time.Millisecond)
+	var seen string
+	for _, line := range s.texts() {
+		if strings.HasPrefix(line, "seen: ") {
+			seen = strings.TrimPrefix(line, "seen: ")
+		}
+	}
+	// It may still grow, as the first field's keyboard finishes coming up
+	// (UIKit reports the keys, then the keys with the bar); it never drops.
+	heights := strings.Fields(seen)
+	if len(heights) == 0 {
+		t.Fatalf("no keyboard height seen: %q", s.texts())
+	}
+	first := mustAtoi(t, heights[0])
+	for _, h := range heights[1:] {
+		if mustAtoi(t, h) < first {
+			t.Fatalf("the keyboard's height went %s as focus moved, want it never to drop", strings.Join(heights, " → "))
+		}
+	}
+}
+
+// mustAtoi is s as a number; the test fails if it isn't one.
+func mustAtoi(t *testing.T, s string) int {
+	t.Helper()
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return v
+}
+
 var boundsRE = regexp.MustCompile(`class="android\.widget\.EditText"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"`)
 
 // fieldBounds is the first text field's frame on screen, in pixels, from UiAutomator.

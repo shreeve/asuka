@@ -15,6 +15,8 @@ public final class AsukaViewController: UIViewController {
     /// with the finger as a list's interactive dismissal drags it down,
     /// when no notification says so.
     private let keyboardTracker = UIView()
+    /// While focus moves from one field to another (holdKeyboard).
+    private var keyboardHeld = false
 
     public override func viewDidLoad() {
         super.viewDidLoad()
@@ -110,8 +112,8 @@ public final class AsukaViewController: UIViewController {
 
     public override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        let moved = trackKeyboard()
-        updateKeyboard()
+        let moved = !keyboardHeld && trackKeyboard()
+        if !keyboardHeld { updateKeyboard() }
         sendEnvironment()
         if moved { AsukaRuntime.shared.reportScreens() }
     }
@@ -176,9 +178,36 @@ public final class AsukaViewController: UIViewController {
         } else {
             keyboardEnd = (info[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue
         }
-        updateKeyboard()
+        if keyboardHeld { return }
         let duration = (info[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double) ?? 0.25
         let curve = (info[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt) ?? 7
+        followKeyboard(duration: duration, curve: curve)
+    }
+
+    /// Focus is about to move from one field to another with the keyboard
+    /// up: UIKit swaps their accessories (inputAccessoryView), and the
+    /// keyboard shrinks by the old one's bar and grows by the new one's, a
+    /// few notifications in separate turns. Followed, what sits on the
+    /// keyboard would drop and come back up. Until the move is done the
+    /// keyboard's changes wait; then the keyboard as it is is taken, and
+    /// the views move only if it changed (another keyboard, another bar).
+    func holdKeyboard() {
+        guard keyboard > 0, !keyboardHeld else { return }
+        keyboardHeld = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            guard let self else { return }
+            self.keyboardHeld = false
+            let was = self.keyboard
+            self.updateKeyboard()
+            if abs(self.keyboard - was) > 0.5 { self.followKeyboard(duration: 0.25, curve: 7) }
+        }
+    }
+
+    /// Takes the keyboard as keyboardEnd has it and reports it, the views
+    /// moving with it over duration and curve; once they're there, the
+    /// focused field is revealed above it.
+    private func followKeyboard(duration: Double, curve: UInt) {
+        updateKeyboard()
         // The core lays out and applies frames inside this block, so the
         // views move with the keyboard.
         UIView.animate(withDuration: duration, delay: 0, options: UIView.AnimationOptions(rawValue: curve << 16)) {

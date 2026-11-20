@@ -34,6 +34,13 @@ final class AsukaTextView: UITextView {
                                           bottom: own.bottom + contentInset_.bottom, right: own.right + contentInset_.right)
     }
 
+    /// As AsukaTextField's: focus coming from another field keeps the
+    /// keyboard where it is while their accessories swap.
+    override func becomeFirstResponder() -> Bool {
+        if !isFirstResponder { AsukaRuntime.shared.controller?.holdKeyboard() }
+        return super.becomeFirstResponder()
+    }
+
     var placeholder: String? {
         get { placeholderLabel.text }
         set { placeholderLabel.text = newValue; setNeedsLayout() }

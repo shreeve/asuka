@@ -320,6 +320,13 @@ final class AsukaTextField: UITextField {
         if AsukaPaste.take(asukaID, pasteTypes) { return }
         super.paste(sender)
     }
+
+    /// Focus coming from another field keeps the keyboard where it is
+    /// while their accessories swap (holdKeyboard).
+    override func becomeFirstResponder() -> Bool {
+        if !isFirstResponder { AsukaRuntime.shared.controller?.holdKeyboard() }
+        return super.becomeFirstResponder()
+    }
 }
 
 /// The iOS host: applies the core's ops to UIKit views and reports

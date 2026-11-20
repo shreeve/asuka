@@ -86,9 +86,11 @@ line is deeper.
 2. **Both forms, mixed freely.** A block may be braced or indented, a
    file may hold both, and existing code is unchanged. A one-line block
    keeps its braces.
-3. **Spaces only for indentation.** A tab at the start of a line that
-   opens or continues an indented block is an error. (No `.asuka` file
-   in this repository indents with a tab.)
+3. **Spaces only for indentation.** A line indented with a tab never
+   opens a block: tabs stay braced code's, as in a program inside a Go
+   string. A tab in the indentation of a line inside an indented block
+   is an error. (No `.asuka` file in this repository indents with a
+   tab.)
 4. **One form from `asuka fmt`.** The printer writes one canonical form
    today and keeps writing one. Which form is the question this RFC
    most needs an answer to (Open questions).
@@ -113,6 +115,19 @@ continuation stays one: after an operator, a comma, `=>`, an opening
 bracket, and before a line that starts with a binary operator.
 Indentation never opens a block inside parentheses or brackets, where
 newlines don't count.
+
+A deeper line opens nothing where no block can go, so existing braced
+code under uneven indentation keeps its meaning:
+
+- a line that starts with `}`: it closes a braced block;
+- a line after a `}` that starts its line: the end of a braced block
+  written over lines;
+- a line after an element's or a declaration's one-line block
+  (`Text(t) { font: .title }`): that was its block.
+
+A statement whose head takes an expression (`if`, `for`, `while`,
+`match`) can still take its block after a one-line closure in it:
+`if let p = try? await spawn { load() }` and a deeper line.
 
 A deeper line that starts with `.name` continues the line before, as
 decision 26 has it (`let names = users ⏎ .filter(…)`), with one
@@ -180,7 +195,8 @@ with a code (0015) and its zh and ja text:
 - `indent-mismatch`: a line comes back to an indentation no open block
   has ("this line's indentation, 3 spaces, matches no open block; the
   blocks open here are at 0, 2 and 4").
-- `indent-tab`: a tab in a line's indentation.
+- `indent-tab`: a tab in the indentation of a line inside an indented
+  block.
 - `indent-unexpected`: a line indented deeper after a line that can't
   open a block or continue onto it (for example after a complete
   `let`): today a NEWLINE and an indented statement, which may be what

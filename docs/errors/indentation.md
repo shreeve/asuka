@@ -1,12 +1,12 @@
 # indentation
 
-A line's indentation matches no open block, or holds a tab.
+A line's indentation matches no open block, or holds a tab inside an indented block.
 
 An error the compiler reports: the program doesn't build until it's fixed.
 
 ## Why
 
-A block may be written by indentation instead of braces: a deeper line opens it and the block ends where the indentation comes back. So a line must come back to the indentation of a block that's open, or the scanner can't tell which block it belongs to. Indentation is spaces: a tab is a different width in every editor.
+A block may be written by indentation instead of braces: a deeper line opens it and the block ends where the indentation comes back. So a line must come back to the indentation of a block that's open, or the scanner can't tell which block it belongs to. Indentation is spaces: a tab is a different width in every editor. A line indented with a tab never opens a block (braced code may be indented with tabs, as a program inside a Go string is), and one inside an indented block is this error.
 
 ## How to fix
 

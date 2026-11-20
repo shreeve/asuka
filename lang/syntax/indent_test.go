@@ -36,6 +36,18 @@ func TestIndentedBlocks(t *testing.T) {
 		{"blank lines and comments",
 			"fn f() -> int\n  // a comment\n\n  let a = 1\n    // deeper comment\n  return a\n",
 			"fn f() -> int {\n  // a comment\n\n  let a = 1\n    // deeper comment\n  return a\n}\n"},
+		{"braced code indented with tabs, as in a Go string",
+			"\tcomponent A {\n\t\tColumn {\n\t\t\tText(\"a\")\n\t\t}\n\t}\n",
+			"component A {\n  Column {\n    Text(\"a\")\n  }\n}\n"},
+		{"a deeper line after a closing brace opens nothing",
+			"\tcomponent A {\n\t  Text(\"a\")\n\t}\n\n\t\tcomponent B {\n\t\t  Text(\"b\")\n\t\t}\n",
+			"component A {\n  Text(\"a\")\n}\n\ncomponent B {\n  Text(\"b\")\n}\n"},
+		{"tab-indented lines open nothing: after an import, after a one-line block",
+			"import std/math\n\t\tcomponent R {\n\t\t  Column {\n\t\t    gap: 4\nText(\"a\") { width: 16 }\n\t\t    Text(\"b\")\n\t\t  }\n\t\t}\n",
+			"import std/math\ncomponent R {\n  Column {\n    gap: 4\n    Text(\"a\") { width: 16 }\n    Text(\"b\")\n  }\n}\n"},
+		{"a one-line block then a deeper line: braced code under uneven indentation",
+			"component A {\n  Column {\nText(\"a\") { width: 16 }\n    Text(\"b\")\nButton(\"c\") { on press { n = 1 } }\n  }\n}\n",
+			"component A {\n  Column {\n    Text(\"a\") { width: 16 }\n    Text(\"b\")\n    Button(\"c\") { on press { n = 1 } }\n  }\n}\n"},
 		{"struct and store",
 			"struct P\n  x: int\n  y: int\nstore S\n  state n = 0\n  pub fn add()\n    n += 1\n",
 			"struct P {\n  x: int\n  y: int\n}\nstore S {\n  state n = 0\n  pub fn add() {\n    n += 1\n  }\n}\n"},
@@ -57,12 +69,13 @@ func TestIndentedBlocks(t *testing.T) {
 	}
 }
 
-// A line that comes back to an indentation no block has, or indents with
-// a tab, is an indentation error, where it is.
+// A line that comes back to an indentation no block has, or a tab in the
+// indentation of a line inside an indented block, is an indentation
+// error, where it is.
 func TestIndentationErrors(t *testing.T) {
 	tests := []struct{ src, where string }{
 		{"fn f() -> int\n    let a = 1\n  return a\n", "t.asuka:3:3"},
-		{"fn f() -> int\n\tlet a = 1\n\treturn a\n", "t.asuka:2:1"},
+		{"fn f() -> int\n  let a = 1\n\t return a\n", "t.asuka:3:1"},
 	}
 	for _, tt := range tests {
 		_, errs := ParseFile(NewFileSet(), "t.asuka", []byte(tt.src))

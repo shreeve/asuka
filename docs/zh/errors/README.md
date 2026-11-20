@@ -24,7 +24,7 @@ Asuka 报告的每个错误和警告都有一个代码：一个稳定的名称�
 - [format-spec](format-spec.md): 插值的格式和它的值对不上。
 - [group-not-calls](group-not-calls.md): `load (…)` 里的元素不都是调用。
 - [import-cycle](import-cycle.md): 相互导入的包。
-- [indentation](indentation.md): 某行的缩进对不上任何打开的块，或者含有制表符。
+- [indentation](indentation.md): 某行的缩进对不上任何打开的块，或者在用缩进写的块里含有制表符。
 - [inline-snapshot](inline-snapshot.md): 内联快照不是直接写在调用里的字符串。
 - [int-overflow](int-overflow.md): 超出所属类型范围的整数字面量。
 - [interface-not-satisfied](interface-not-satisfied.md): 类型声明了某个 interface，却没有实现它。

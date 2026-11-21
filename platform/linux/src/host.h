@@ -630,6 +630,7 @@ void lx_set_date_prop(node *n, ak_prop p, const ak_value *v);
 void lx_release_date(node *n);
 bool lx_create_picker(node *n);
 bool lx_set_picker_prop(node *n, ak_prop p, const ak_value *v);
+void lx_style_picker(node *n);
 bool lx_create_progress_ring(node *n);
 bool lx_set_progress_ring_prop(node *n, ak_prop p, const ak_value *v);
 bool lx_draw_progress_ring(node *n, GtkSnapshot *snap, const graphene_rect_t *b);

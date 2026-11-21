@@ -41,7 +41,7 @@
 // Screens, sheets, popovers and windows are sized by the host, which
 // reports each one's Environment.
 
-import { Kind, KindProp as P, Event, Events, Command, Reader, TitleBar, environment as newEnv } from "./ops.js";
+import { Kind, KindProp as P, Event, Events, Command, Reader, TitleBar, WindowAction, environment as newEnv } from "./ops.js";
 import { Flag, place, center, trayAnchor, focusIn, transient } from "./window.js";
 import { own, autocomplete, inputModes } from "./views.js";
 import { decodeAlertFields, fieldChanged, AlertFieldFlags } from "./alertfields.js";
@@ -533,10 +533,49 @@ export class Navigation {
     d.showModal();
     this.sizeDialog(n);
     const wide = this.wide() && !n.fullScreen;
-    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      d.animate(wide ? [{ opacity: 0, transform: "scale(0.96)" }, { opacity: 1, transform: "none" }] : [{ transform: "translateY(100%)" }, { transform: "none" }], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
-    }
+    const begin = () => {
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        d.animate(wide ? [{ opacity: 0, transform: "scale(0.96)" }, { opacity: 1, transform: "none" }] : [{ transform: "translateY(100%)" }, { transform: "none" }], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
+      }
+    };
+    if (this.fitsContent(n)) {
+      // It shows at its content's size: the core's first Fit, for the
+      // room reported as it was sized, begins it (fitSheet). The core
+      // answers that report before anything queued after it, so a sheet
+      // still waiting then gets no Fit (a core without fit sheets on the
+      // web): it shows as tall as its room rather than stay hidden, a
+      // modal dialog taking every press.
+      d.style.visibility = "hidden";
+      n.begin = begin;
+      this.h.call(() => this.showSheet(n));
+    } else begin();
     this.updateGuard();
+  }
+
+  /** fitsContent reports whether n is a sheet as tall as its content (DetentFit), which the core sizes. */
+  fitsContent(n) { return n.kind === Kind.Sheet && (n.detents & 4) !== 0 && !n.fullScreen; }
+
+  /**
+   * fitSheet sizes a sheet as tall as its content to the size the core
+   * laid it out at (WindowAction Fit: its width and height), and shows
+   * it the first time.
+   */
+  fitSheet(n, args) {
+    if (args.length < 9 || args[0] !== WindowAction.Fit) return;
+    const v = new DataView(args.buffer, args.byteOffset, args.byteLength);
+    const w = v.getFloat32(1, true), h = v.getFloat32(5, true);
+    if (w > 0 && h > 0) n.fit = [w, h];
+    this.sizeDialog(n);
+    this.showSheet(n);
+  }
+
+  /** showSheet shows a sheet as tall as its content that waits to be shown, and begins its opening. */
+  showSheet(n) {
+    if (!n.begin || !n.dialog) return;
+    const begin = n.begin;
+    n.begin = null;
+    n.dialog.style.visibility = "";
+    begin();
   }
 
   sizeDialog(n) {
@@ -595,6 +634,13 @@ export class Navigation {
         }
       }
     }
+    // A sheet as tall as its content is as big as the core laid it out
+    // (fitSheet), its room what it reports: what the core fits it in.
+    const room = [w, h];
+    if (n.fit && this.fitsContent(n)) {
+      w = Math.min(n.fit[0], c.width);
+      h = Math.min(n.fit[1], h);
+    }
     d.style.width = w + "px";
     d.style.height = h + "px";
     const s = n.el.style;
@@ -606,7 +652,7 @@ export class Navigation {
     s.left = "0px"; s.top = top + "px"; s.width = w + "px"; s.height = h - top + "px";
     n.frame = [0, top, w, h - top];
     n.placed = true;
-    this.report(n, w, h - top, n.el, n.kind === Kind.Window ? n.win.safeTop : 0);
+    this.report(n, room[0], room[1] - top, n.el, n.kind === Kind.Window ? n.win.safeTop : 0);
     this.h.overlays?.changed();
     if (n.kind === Kind.Window) {
       this.h.windows.report(n);

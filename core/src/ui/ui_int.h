@@ -374,7 +374,7 @@ typedef struct ak_prov {
 	bool fits;      // sized to its content: a popover's, an accessory's
 	bool full_width;
 	bool fit_sheet;  // a sheet as tall as its content (Detent fit)
-	bool fit_wait;   // a fit sheet waits for its room (its first Environment)
+	bool fit_wait;   // a sheet asking to fit its content waits for its room (its first Environment)
 	bool fit_win;    // a window sized to its content
 	bool fit_sent;
 	// An enclosing provider whose environment it takes, as that changes,
@@ -402,6 +402,9 @@ void ak_root_layout_provs(ak_ui_root *r, ak_lpass *p);
 void ak_overlays_layout_hook(ak_ui_root *r, ak_lpass *p);
 // ak_prov_report sets a provider's environment, reported by the host.
 bool ak_prov_report(ak_id id, const ak_environment *env);
+// ak_fit_sheet_platform reports whether the platform has sheets as tall as
+// their content (Detent fit): macOS's and the web's.
+bool ak_fit_sheet_platform(uint8_t platform);
 // ak_only_kid is v made to fill its parent, as the one child of a kind
 // that has one (a sheet's, a window's content): wrapped in a View when
 // it makes none of its own.

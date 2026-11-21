@@ -1,0 +1,3 @@
+name = "Fit Sheet"
+id = "dev.asuka.fitsheet"
+orientations = ["portrait"]

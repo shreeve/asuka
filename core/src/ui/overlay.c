@@ -110,8 +110,11 @@ ak_view *ak_sheet_present(ak_ui_root *r, ak_owner *owner, ak_closure *build, ak_
 	s->dismissed = dismissed;
 	s->ctx = ctx;
 	ak_prov *pv = ak_prov_new(r);
-	pv->fit_sheet = !full && (detents & 4) && r->env.platform == AK_PLATFORM_MACOS;
-	pv->fit_wait = pv->fit_sheet;
+	// As tall as its content where the platform has such a sheet; a
+	// sheet can open before the root's environment names the platform
+	// (the web's), so its own first one settles it (ak_prov_report).
+	pv->fit_wait = !full && (detents & 4);
+	pv->fit_sheet = pv->fit_wait && ak_fit_sheet_platform(r->env.platform);
 	ak_prov_attach(e, pv);
 	ak_release(pv);
 	e->up = up;

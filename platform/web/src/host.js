@@ -822,7 +822,9 @@ export class Host {
         break;
       }
       case Command.WindowAction:
-        this.windows.action(n, args);
+        // A sheet as tall as its content: the size the core laid it out at.
+        if (n.kind === Kind.Sheet) this.nav.fitSheet(n, args);
+        else this.windows.action(n, args);
         break;
       case Command.WindowTitle:
         this.windowTitle = new TextDecoder().decode(args);

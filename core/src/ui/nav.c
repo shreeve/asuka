@@ -89,6 +89,8 @@ ak_prov *ak_prov_new(ak_ui_root *r) {
 	return p;
 }
 
+bool ak_fit_sheet_platform(uint8_t platform) { return platform == AK_PLATFORM_MACOS || platform == AK_PLATFORM_WEB; }
+
 ak_prov *ak_prov_current(void) {
 	void *v = NULL;
 	return ak_context_lookup(ak_env_key, &v) ? v : NULL;
@@ -173,6 +175,15 @@ bool ak_prov_report(ak_id id, const ak_environment *in) {
 	ak_environment env = *in;
 	if (env.width_class == AK_SIZE_CLASS_UNSPECIFIED) env.width_class = ak_width_class_of(env.width);
 	if (env.height_class == AK_SIZE_CLASS_UNSPECIFIED) env.height_class = ak_height_class_of(env.height);
+	if (p->fit_wait) {
+		// A sheet asking to be as tall as its content is one where the
+		// platform its first environment names has such a sheet.
+		bool fit = ak_fit_sheet_platform(env.platform);
+		if (fit != p->fit_sheet) {
+			p->fit_sheet = fit;
+			ak_style_relayout(v);
+		}
+	}
 	p->fit_wait = false;  // its own room, which a fit sheet waits for
 	if (p->follows) {
 		// The host sizes it itself: it no longer follows.

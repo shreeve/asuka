@@ -1,0 +1,30 @@
+// Fit Sheet opens a sheet as tall as its content (e2e's TestFitSheet*):
+// its content a magenta square 48 points high over a red band 150 points
+// high, on a green page, so the test sees where the sheet ends.
+
+component FitSheet {
+  state open = true
+
+  View {
+    grow: 1
+    background: #00ff00
+    Text("Behind")
+    Sheet {
+      open: open
+      detents: [.fit]
+      on dismiss { open = false }
+      Column {
+        background: #ffffff
+        View { width: 48; height: 48; background: #ff00ff }
+        View { height: 150; background: #ff0000 }
+      }
+    }
+  }
+}
+
+app { FitSheet() }
+
+test "the sheet's content shows" {
+  let app = mount(FitSheet())
+  app.expect("Behind")
+}

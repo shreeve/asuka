@@ -99,6 +99,31 @@ TEST(screen_column) {
 	ak_lpass_free(&p);
 }
 
+// A column sized to its content, one of its texts with a least width
+// wider than its content's narrowest: the column is as wide as that,
+// and its texts' heights are the ones at that width (the text in 2
+// lines, the title in 1), not at their own narrowest; laid out at that
+// width after, it answers the same.
+TEST(a_column_at_its_min_content_width_lays_its_texts_out_at_it) {
+	int a = 9, b = 50;  // b: 400pt on one line, 2 lines at 200pt, 50 at its narrowest
+	ak_lnode *title = label(&a), *t = label(&b);
+	ak_lnode_style(t)->min_width = ak_lpt(220);
+	ak_lnode_style(t)->padding = ak_lrect_all(ak_lpt(10));
+	ak_lnode *root = col(title, t);
+	ak_lpass p = {0};
+	ak_lsize s = ak_lnode_layout(root, (ak_lsize){AK_LMIN_CONTENT, AK_LMAX_CONTENT}, &p);
+	CHECK_EQ_STR(FRAMES(root, title, t), "0,0 220x80 | 0,0 220x20 | 0,20 220x60");
+	CHECK(s.w == 220 && s.h == 80);
+	ak_lstyle st = *ak_lnode_style(root);
+	st.width = ak_lpt(220);
+	ak_lnode_set_style(root, &st);
+	s = ak_lnode_layout(root, (ak_lsize){220, AK_LMAX_CONTENT}, &p);
+	CHECK_EQ_STR(FRAMES(root, title, t), "0,0 220x80 | 0,0 220x20 | 0,20 220x60");
+	CHECK(s.h == 80);
+	ak_lnode_free_tree(root);
+	ak_lpass_free(&p);
+}
+
 TEST(relayout_without_changes_does_nothing) {
 	int n[20];
 	ak_lnode *kids[20];

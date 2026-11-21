@@ -22,6 +22,9 @@ import AppKit
 import AsukaOps
 #endif
 
+/// The room a sheet keeps from its window's sides, 40 on each.
+let asukaSheetMargin: CGFloat = 80
+
 /// What navigation keeps of a node (stacks, screens, tabs, sheets, alerts,
 /// windows).
 @MainActor final class AsukaNav {
@@ -62,6 +65,9 @@ import AsukaOps
     /// Shows a sheet as tall as its content once the core has sized it
     /// (fitSheet): before, it would slide in at its room's size.
     var begin: (() -> Void)?
+    /// The least content size a fit sheet's window had before the sheet
+    /// held its width (holdSheetWidth), given back as the sheet goes.
+    var parentLeast: CGSize?
     var alert: NSAlert?
     var alertStyle: Int32 = 0
     var order: [Int] = [] // an alert's buttons' indexes, in the alert's order
@@ -335,6 +341,7 @@ final class AsukaSheetWindow: NSWindow {
             return true
         case .sheet:
             n.dying = true
+            releaseSheetWidth(n)
             if let w = nav.window {
                 if let p = w.sheetParent { p.endSheet(w) }
                 w.orderOut(nil)
@@ -465,7 +472,7 @@ final class AsukaSheetWindow: NSWindow {
     /// as its content (DetentFit) is that tall at most.
     func sheetRoom(_ n: AsukaNode, _ over: AsukaWin) -> CGSize {
         let cs = over.content.bounds.size
-        var size = CGSize(width: min(max(cs.width - 80, 320), 640), height: max(cs.height - 100, 240))
+        var size = CGSize(width: min(max(cs.width - asukaSheetMargin, 320), 640), height: max(cs.height - 100, 240))
         if n.nav?.detents == 1 { size.height = max(cs.height / 2, 240) } // medium only
         return size
     }
@@ -477,12 +484,15 @@ final class AsukaSheetWindow: NSWindow {
     }
 
     /// Sizes a sheet as tall as its content to the size the core laid it
-    /// out at, its top edge kept.
+    /// out at (wider than its room when its content can't be narrower),
+    /// its top edge kept and centred where it was, its window held wide
+    /// enough for it.
     func fitSheet(_ n: AsukaNode, _ width: Float, _ height: Float) {
         guard let nav = n.nav, let w = nav.window else { return }
         if width > 0 && height > 0 {
+            holdSheetWidth(n, CGFloat(width))
             let f = w.frame
-            let top = CGPoint(x: f.minX, y: f.maxY)
+            let top = CGPoint(x: f.midX - CGFloat(width) / 2, y: f.maxY)
             let size = CGSize(width: CGFloat(width), height: CGFloat(height))
             w.setContentSize(size)
             w.setFrameTopLeftPoint(top)
@@ -494,6 +504,37 @@ final class AsukaSheetWindow: NSWindow {
             nav.begin = nil
             afterCore(begin)
         }
+    }
+
+    /// Keeps the window a fit sheet is on as wide as the sheet and the
+    /// margin around it while it shows: the window's least width is
+    /// raised to that, and a window already narrower widens about its
+    /// centre, as far as its screen allows.
+    func holdSheetWidth(_ n: AsukaNode, _ width: CGFloat) {
+        guard let nav = n.nav, let over = onWin(n) else { return }
+        let pw = over.window
+        let need = width + asukaSheetMargin
+        if nav.parentLeast == nil { nav.parentLeast = pw.contentMinSize }
+        let least = nav.parentLeast ?? .zero
+        pw.contentMinSize = CGSize(width: max(least.width, need), height: least.height)
+        let have = over.content.bounds.width
+        guard have < need else { return }
+        var f = pw.frame
+        f.origin.x -= (need - have) / 2
+        f.size.width += need - have
+        if let vis = pw.screen?.visibleFrame {
+            f.size.width = min(f.width, vis.width)
+            f.origin.x = min(max(f.minX, vis.minX), vis.maxX - f.width)
+        }
+        pw.setFrame(f, display: true)
+    }
+
+    /// Gives a fit sheet's window back its own least size as the sheet
+    /// goes.
+    func releaseSheetWidth(_ n: AsukaNode) {
+        guard let nav = n.nav, let least = nav.parentLeast else { return }
+        nav.parentLeast = nil
+        onWin(n)?.window.contentMinSize = least
     }
 
     /// Sizes every host-sized view again (a window resized).

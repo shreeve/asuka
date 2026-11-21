@@ -305,7 +305,9 @@ final class AsukaRichTextView: NSTextView {
         let w = c.fitWidth(minContent)
         var s = r.layoutAt(w)
         if w < asukaBig { s.width = min(s.width.rounded(.up), w) }
-        _ = r.layoutAt(max(r.width, 1))
+        // Typeset again at the width it shows at, if it shows yet: before
+        // it's placed, its frame typesets it (placeInlines).
+        if r.width > 0 && r.width != w { _ = r.layoutAt(r.width) }
         return CGSize(width: s.width.rounded(.up), height: s.height.rounded(.up))
     }
 
@@ -328,7 +330,7 @@ final class AsukaRichTextView: NSTextView {
         // Its text inside its padding (ContentInset): the container is as
         // wide as what's left, at the text view's container origin.
         r.width = n.frame.width - n.inset.right - n.inset.left
-        _ = r.layoutAt(max(r.width, 1))
+        if r.width > 0 { _ = r.layoutAt(r.width) }
         guard !r.inlines.isEmpty, let ts = r.view.textStorage, let lm = r.view.layoutManager, let tc = r.view.textContainer else { return }
         let ox = n.inset.left, oy = n.inset.top
         let s = ts.string as NSString

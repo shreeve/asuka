@@ -236,23 +236,51 @@ static void send_fit(ak_ui_root *r, ak_view *e, ak_lsize s) {
 	ak_batch_command(r->batch, e->id, AK_CMD_WINDOW_ACTION, args, sizeof args);
 }
 
+// fit_sheet_style gives a sheet's root its width (auto: its content's)
+// and its height: its content's, up to most.
+static void fit_sheet_style(ak_view *e, ak_llength width, float most) {
+	ak_lstyle *st = ak_lnode_style(e->box);
+	if (st->width.u != width.u || st->width.v != width.v || !ak_llength_is_auto(st->height) ||
+	    st->max_height.u != AK_LUNIT_POINT || st->max_height.v != most) {
+		ak_lstyle ns = *st;
+		ns.width = width, ns.height = AK_LAUTO, ns.max_height = ak_lpt(most);
+		ak_lnode_set_style(e->box, &ns);
+	}
+}
+
+// fit_sheet_overflows says whether anything under n, as last laid out,
+// reaches past right, x being n's left in the root's coordinates.
+static bool fit_sheet_overflows(ak_lnode *n, float x, float right) {
+	uint32_t k;
+	ak_lnode *const *c = ak_lnode_children(n, &k);
+	for (uint32_t i = 0; i < k; i++) {
+		ak_lframe f = ak_lnode_frame(c[i]);
+		if (x + f.x + f.w > right + 0.5f || fit_sheet_overflows(c[i], x + f.x, right)) return true;
+	}
+	return false;
+}
+
 // layout_fit_sheet lays a sheet as tall as its content out at the width
-// its environment gives and its content's height there, up to the
-// environment's height, and sends WindowAction Fit as that changes.
+// its environment gives, and its content's height there, up to the
+// environment's height, and sends WindowAction Fit as that changes. Only
+// content that reaches past that width (a fixed width) is laid out at its
+// narrowest, to widen the sheet to it: text, which can always wrap, isn't
+// measured at its narrowest otherwise.
 static void layout_fit_sheet(ak_ui_root *r, ak_view *e, ak_lpass *lp) {
 	ak_prov *p = e->prov;
 	ak_lsize room = {p->env.width, p->env.height};
 	if (p->fit_wait || room.w <= 0 || room.h <= 0 ||
 	    (!ak_lnode_dirty(e->box) && p->fit_sent && room.w == p->room.w && room.h == p->room.h))
 		return;
-	ak_lstyle *st = ak_lnode_style(e->box);
-	if (st->width.u != AK_LUNIT_POINT || st->width.v != room.w || !ak_llength_is_auto(st->height) ||
-	    st->max_height.u != AK_LUNIT_POINT || st->max_height.v != room.h) {
-		ak_lstyle ns = *st;
-		ns.width = ak_lpt(room.w), ns.height = AK_LAUTO, ns.max_height = ak_lpt(room.h);
-		ak_lnode_set_style(e->box, &ns);
-	}
+	fit_sheet_style(e, ak_lpt(room.w), room.h);
 	ak_lsize s = ak_lnode_layout(e->box, (ak_lsize){room.w, AK_LMAX_CONTENT}, lp);
+	if (fit_sheet_overflows(e->box, 0, s.w)) {
+		fit_sheet_style(e, AK_LAUTO, room.h);
+		float w = ak_lnode_layout(e->box, (ak_lsize){AK_LMIN_CONTENT, AK_LMAX_CONTENT}, lp).w;
+		if (!(w > room.w)) w = room.w;
+		fit_sheet_style(e, ak_lpt(w), room.h);
+		s = ak_lnode_layout(e->box, (ak_lsize){w, AK_LMAX_CONTENT}, lp);
+	}
 	p->room = room;
 	if (p->fit_sent && s.w == p->laid.w && s.h == p->laid.h) return;
 	p->laid = s, p->fit_sent = true;

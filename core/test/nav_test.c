@@ -9,6 +9,7 @@
 #include "ui/ui_int.h"
 #include "fuzz.h"
 
+#include <math.h>
 #include <stdio.h>
 
 // ---- Helpers ----
@@ -656,6 +657,89 @@ TEST(sheet) {
 	ak_ui_flush();
 	done(a);
 	ak_release(open_cell);
+}
+
+// ---- A sheet as tall as its content (DetentFit, macOS) ----
+
+static bool fit_wide;         // its content holds a view wider than a sheet
+static int fit_min_measures;  // its text's measures at its narrowest
+
+// fit_measure measures text as the fake host does, 8pt a character in
+// 20pt lines, wrapping where it's offered less, and counts the measures
+// at its narrowest (min-content).
+static void fit_measure(void *ctx, ak_fake_view *v, float w, float h, float aw, float ah, float *ow, float *oh) {
+	AK_UNUSED(ctx), AK_UNUSED(h), AK_UNUSED(ah);
+	float full = (float)ak_fake_string(v, AK_PROP_TEXT_TEXT).len * 8;
+	float at = w == w ? w : aw;
+	if (aw < 0 && isinf(aw) && w != w) {
+		fit_min_measures++;
+		at = 80;  // its widest word
+	}
+	if (!(at < full)) at = full;
+	*ow = at;
+	*oh = at > 0 ? ceilf(full / at) * 20 : 20;
+}
+
+static ak_val fit_content(ak_closure *c, ak_val *a, uint32_t n) {
+	AK_UNUSED(c), AK_UNUSED(a), AK_UNUSED(n);
+	ak_view *col = ak_ui_new(AK_EL_COLUMN);
+	char words[2001];
+	for (int i = 0; i < 2000; i++) words[i] = i % 10 == 9 ? ' ' : 'w';
+	words[2000] = 0;
+	add(col, text(words));
+	if (fit_wide) {
+		ak_view *v = ak_ui_new(AK_EL_VIEW);
+		set_i(v, AK_KEY_WIDTH, ak_length_pt(820));
+		set_i(v, AK_KEY_HEIGHT, ak_length_pt(10));
+		add(col, v);
+	}
+	return (ak_val){.p = col};
+}
+
+static ak_val fit_app(ak_closure *c, ak_val *a, uint32_t n) {
+	AK_UNUSED(c), AK_UNUSED(a), AK_UNUSED(n);
+	ak_view *col = ak_ui_new(AK_EL_COLUMN);
+	ak_view *s = ak_ui_new(AK_EL_SHEET);
+	bind(s, AK_KEY_SHEET_OPEN, read_cell, open_cell);
+	ak_arr *dets = ak_arr_new(AK_K_INT, NULL, 1);
+	ak_arr_push(&dets, (ak_val){.i = 2});  // fit
+	set(s, AK_KEY_SHEET_DETENTS, (ak_val){.p = dets});
+	lazy(s, fit_content, NULL);
+	add(col, s);
+	return (ak_val){.p = col};
+}
+
+// A sheet as tall as its content is laid out at a sheet's width, its text
+// measured there alone; content that can't be that narrow (a view wider
+// than a sheet) widens it, and only then is its text measured at its
+// narrowest.
+TEST(fit_sheet_measures_its_narrowest_only_for_wide_content) {
+	for (int wide = 0; wide < 2; wide++) {
+		fit_wide = wide, fit_min_measures = 0;
+		open_cell = ak_vm_cell_new((ak_val){.i = 0}, AK_K_BOOL, NULL).p;
+		setup();
+		ak_closure *c = fn(fit_app, NULL);
+		ak_uitest *a = ak_uitest_mount_at(c, NULL, AK_PLATFORM_MACOS, (ak_span){0});
+		ak_release(c);
+		ak_fake *f = ak_uitest_host(a);
+		f->measure_fn = fit_measure;
+		ak_vm_cell_set(open_cell, (ak_val){.i = 1});
+		ak_ui_flush();
+		ak_fake_view *sheet = nth(a, AK_KIND_SHEET, 0);
+		REQUIRE(sheet && sheet->presented);
+		ak_fake_report_sheet(f, sheet);
+		ak_fake_view *t = nth(a, AK_KIND_TEXT, 0);
+		REQUIRE(t);
+		if (wide) {
+			CHECK(fit_min_measures > 0);
+			CHECK_EQ_F(t->frame[2], 820);
+		} else {
+			CHECK_EQ_INT(fit_min_measures, 0);
+			CHECK_EQ_F(t->frame[2], f->env.width);
+		}
+		done(a);
+		ak_release(open_cell);
+	}
 }
 
 // ---- A sheet's screen (a Router's sheet route's) ----

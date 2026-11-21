@@ -125,6 +125,22 @@ static l_output flex(ak_lnode *n, const l_input *in, ak_lpass *p) {
 		items[nitems++] = it;
 	}
 
+	// A single-line column whose width isn't known (sized to its
+	// content): its width first, its widest item's, as a browser lays a
+	// column out at its intrinsic width, so its items stretch to it and
+	// their heights are the ones at it (a text's, wrapped there), not at
+	// their own narrowest.
+	if (m == 1 && !wrap && nitems > 0 && l_isnan(inner_size.w) && !l_definite(avail.w)) {
+		float cross = 0;
+		for (int i = 0; i < nitems; i++) {
+			flex_item *it = &items[i];
+			ak_lsize ca = {avail.w, AK_LMAX_CONTENT};
+			ak_lsize o = l_measure_size(it->node, (l_input){.sizing = SIZE_INHERENT, .known = {LNAN, LNAN}, .parent = inner_size, .avail = ca}, p);
+			cross = l_maxf(cross, o.w + l_sum_axis(it->margin, 0));
+		}
+		avail.w = l_maxf(0, l_clampn(cross + pbs.w, min_s.w, max_s.w) - pbs.w);
+	}
+
 	// 2. Flex base sizes and hypothetical main sizes (§9.2.3).
 	for (int i = 0; i < nitems; i++) {
 		flex_item *it = &items[i];

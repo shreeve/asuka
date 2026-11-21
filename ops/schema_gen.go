@@ -766,7 +766,7 @@ const (
 	CmdScrollTo CommandID = 18
 	// CmdScrollToOffset: args: f32 x, f32 y (points from the content's top left; clamped, so a large one is the end), u8 animated; sent to a Scroll or List.
 	CmdScrollToOffset CommandID = 19
-	// CmdAccent: args: u64 Color (0: the platform's), u8 flags (1: on Android, the wallpaper's colors where the system has them); sent to the root when it mounts: the app's accent color, which the platform's controls and Accent take (iOS: the tint color; Android: a Material 3 color scheme made from it).
+	// CmdAccent: args: u64 Color (0: the platform's), u8 flags (1: on Android, the wallpaper's colors where the system has them), u64 Dark (the Color in dark mode; 0: Color in both); sent to the root when it mounts: the app's accent color, which the platform's controls and Accent take (iOS: the tint color; Android: a Material 3 color scheme made from it).
 	CmdAccent CommandID = 20
 	// CmdWebNavigate: args: u8 0 back, 1 forward, 2 reload, 3 stop; sent to a WebView.
 	CmdWebNavigate CommandID = 21

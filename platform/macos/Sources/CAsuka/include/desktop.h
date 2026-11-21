@@ -129,7 +129,7 @@ const char *dsk_base(const char *path);
 // ---- The app's settings (asuka-app.json) ----
 
 typedef struct {
-	char *name, *id, *version, *build, *accent, *scheme, *file_types;
+	char *name, *id, *version, *build, *accent, *accent_dark, *scheme, *file_types;
 	char *lang, *direction;
 	bool background, keep_running, multiple_instances;
 	char *update_feed, *update_key, *update_target;

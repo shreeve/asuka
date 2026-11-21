@@ -25,6 +25,7 @@ import (
 //	build = 7
 //	icon = "icon.png"
 //	accent = "#7c3aed"
+//	accentDark = "#a78bfa"
 //	orientations = ["portrait"]
 //
 //	[ios]
@@ -128,6 +129,10 @@ type appConfig struct {
 	// scheme (Android 12 and later; before, Asuka's own uses of the accent
 	// take it). Default: the platform's.
 	Accent string `json:"accent"`
+	// AccentDark is the accent in dark mode, in the same form, on iOS,
+	// macOS, Windows, Linux and the web (Android's color scheme makes its
+	// dark colors from the accent). Default: Accent in both.
+	AccentDark string `json:"accentDark"`
 	// Background makes a desktop app one that runs in the background,
 	// living in the tray (platform/tray), as app.RunInBackground does: no
 	// window at launch, kept running with none, and on macOS no Dock
@@ -401,6 +406,9 @@ func loadConfig(dir string) (*appConfig, error) {
 		if !hexColor.MatchString(c.Accent) {
 			return nil, fmt.Errorf("asuka.toml: accent %q (want #rrggbb or #rrggbbaa)", c.Accent)
 		}
+	}
+	if c.AccentDark != "" && !hexColor.MatchString(c.AccentDark) {
+		return nil, fmt.Errorf("asuka.toml: accentDark %q (want #rrggbb or #rrggbbaa)", c.AccentDark)
 	}
 	if c.Scheme != "" && !scheme.MatchString(c.Scheme) {
 		return nil, fmt.Errorf("asuka.toml: scheme %q (want letters, digits, + - .; a letter first)", c.Scheme)

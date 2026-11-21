@@ -532,7 +532,7 @@ func (l *loader) compile(root *unit) *Result {
 	if len(res.Diags) > 0 || l.opts.CheckOnly {
 		return res
 	}
-	accent, accentFlags, err := appAccent(root.dir)
+	accent, accentFlags, accentDark, err := appAccent(root.dir)
 	if err != nil {
 		pos := syntax.Position{Filename: filepath.Join(root.dir, "asuka.toml"), Line: 1, Column: 1}
 		res.Diags = append(res.Diags, check.NewDiagnostic(pos, pos, diag.InvalidProject, "%s", err.Error()))
@@ -550,7 +550,7 @@ func (l *loader) compile(root *unit) *Result {
 			}
 		}
 	}
-	p, diags := ir.Lower(prog, &ir.Options{Platform: string(l.opts.Platform.Or()), Debug: l.opts.Debug, Version: projectVersion(vdir), Lang: l.opts.Lang, Direction: l.opts.Direction, Accent: accent, AccentFlags: accentFlags, Cover: cover, NoFuse: l.opts.NoFuse})
+	p, diags := ir.Lower(prog, &ir.Options{Platform: string(l.opts.Platform.Or()), Debug: l.opts.Debug, Version: projectVersion(vdir), Lang: l.opts.Lang, Direction: l.opts.Direction, Accent: accent, AccentFlags: accentFlags, AccentDark: accentDark, Cover: cover, NoFuse: l.opts.NoFuse})
 	res.Diags = append(res.Diags, diags...)
 	if len(res.Diags) > 0 {
 		return res
@@ -622,12 +622,6 @@ func hasExterns(p *check.Package) bool {
 	return false
 }
 
-// appAccent is the app's accent color from its asuka.toml (accent =
-// "#rrggbb" or "#rrggbbaa"), as the wire's Color (0: none, the
-// platform's), and its flags (1: android.dynamicColor, the wallpaper's
-// colors where the system has them). The module's init gives them to the
-// core, which sends them to the host as the app mounts, so asuka dev's
-// player shows each app's.
 // projectVersion is asuka.toml's version in dir ("" for none).
 func projectVersion(dir string) string {
 	if dir == "" || strings.HasPrefix(dir, "pkg:") {
@@ -646,39 +640,58 @@ func projectVersion(dir string) string {
 	return m.Version
 }
 
-func appAccent(dir string) (uint64, uint8, error) {
+// appAccent is the app's accent color from its asuka.toml (accent =
+// "#rrggbb" or "#rrggbbaa"), as the wire's Color (0: none, the
+// platform's), its flags (1: android.dynamicColor, the wallpaper's
+// colors where the system has them) and its color in dark mode
+// (accentDark; 0: the accent in both). The module's init gives them to the
+// core, which sends them to the host as the app mounts, so asuka dev's
+// player shows each app's.
+func appAccent(dir string) (accent uint64, flags uint8, dark uint64, err error) {
 	if dir == "" || strings.HasPrefix(dir, "pkg:") {
-		return 0, 0, nil
+		return 0, 0, 0, nil
 	}
 	b, err := os.ReadFile(filepath.Join(dir, "asuka.toml"))
 	if err != nil {
-		return 0, 0, nil
+		return 0, 0, 0, nil
 	}
 	var m struct {
-		Accent  string `json:"accent"`
-		Android struct {
+		Accent     string `json:"accent"`
+		AccentDark string `json:"accentDark"`
+		Android    struct {
 			DynamicColor bool `json:"dynamicColor"`
 		} `json:"android"`
 	}
 	if toml.Unmarshal(b, &m) != nil {
-		return 0, 0, nil // the CLI reports the manifest's own errors
+		return 0, 0, 0, nil // the CLI reports the manifest's own errors
 	}
-	var flags uint8
 	if m.Android.DynamicColor {
 		flags = 1
 	}
-	if m.Accent == "" {
-		return 0, flags, nil
+	if accent, err = wireColor("accent", m.Accent); err != nil {
+		return 0, 0, 0, err
 	}
-	h := strings.TrimPrefix(m.Accent, "#")
+	if dark, err = wireColor("accentDark", m.AccentDark); err != nil {
+		return 0, 0, 0, err
+	}
+	return accent, flags, dark, nil
+}
+
+// wireColor is asuka.toml's color key ("#rrggbb" or "#rrggbbaa") as the
+// wire's Color, ops.Color's RGBA (0 for "").
+func wireColor(key, s string) (uint64, error) {
+	if s == "" {
+		return 0, nil
+	}
+	h := strings.TrimPrefix(s, "#")
 	if len(h) == 6 {
 		h += "ff"
 	}
 	v, err := strconv.ParseUint(h, 16, 32)
 	if len(h) != 8 || err != nil {
-		return 0, 0, fmt.Errorf("asuka.toml: accent %q (want #rrggbb or #rrggbbaa)", m.Accent)
+		return 0, fmt.Errorf("asuka.toml: %s %q (want #rrggbb or #rrggbbaa)", key, s)
 	}
-	return 2<<32 | v, flags, nil // ops.Color's RGBA
+	return 2<<32 | v, nil
 }
 
 // nativeClass is what a package's platforms' code registers its native

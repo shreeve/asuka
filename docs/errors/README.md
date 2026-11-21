@@ -24,6 +24,7 @@ Every error and warning Asuka reports has a code: a stable name, said in the ter
 - [format-spec](format-spec.md): An interpolation's format that doesn't fit its value.
 - [group-not-calls](group-not-calls.md): `load (…)` of what isn't each a call.
 - [import-cycle](import-cycle.md): Packages that import each other.
+- [indentation](indentation.md): A line's indentation matches no open block, or holds a tab inside an indented block.
 - [inline-snapshot](inline-snapshot.md): An inline snapshot that isn't a string written in the call.
 - [int-overflow](int-overflow.md): An integer literal that doesn't fit in its type.
 - [interface-not-satisfied](interface-not-satisfied.md): A type that declares an interface it doesn't implement.

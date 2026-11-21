@@ -2290,6 +2290,7 @@ bench "fib 20" {
 - format-spec: 插值的格式和它的值对不上. 按值的类型写格式，参照消息的说明：`{n:>6}`、`{x:.2f}`、`{n:#x}`、`{name:<12}`。
 - group-not-calls: `load (…)` 里的元素不都是调用. 只把调用放进组里（`load (api.user(id), api.posts(id))`），把值传给这些调用，或者放在 load 旁边。
 - import-cycle: 相互导入的包. 把两者都需要的部分移到第三个包里，让它们都导入它。
+- indentation: 某行的缩进对不上任何打开的块，或者在用缩进写的块里含有制表符. 把这一行和它所属的块对齐（与该块前面几行的缩进相同），或者改用花括号写这个块。
 - inline-snapshot: 内联快照不是直接写在调用里的字符串. 把快照写成字符串字面量，或者干脆省略（`expectInlineSnapshot(value)`），让 `asuka test` 在第一次运行时写上。
 - int-overflow: 超出所属类型范围的整数字面量. 换一个范围内的数，改用更宽的类型（`u16`、`int`、`u64`）或 `float`；需要超出 64 位的精确整数时，用 `std/bigint` 的 `BigInt`（`BigInt.parse("9223372036854775808")!`）。
 - interface-not-satisfied: 类型声明了某个 interface，却没有实现它. 按 interface 的签名补上缺少的方法（消息里列出了它们）。

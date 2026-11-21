@@ -211,7 +211,9 @@ func TestScanPositions(t *testing.T) {
 	file := fset.AddFile("p.asuka", len(src))
 	var s Scanner
 	s.Init(file, []byte(src), nil)
-	want := []string{"p.asuka:1:1", "p.asuka:1:2", "p.asuka:2:3", "p.asuka:2:6", "p.asuka:2:9", "p.asuka:2:10", "p.asuka:2:12", "p.asuka:3:2"}
+	// The deeper second line is a's block (rfcs/0018): its { at the end
+	// of line 1, its } and the NEWLINEs at the end of line 2.
+	want := []string{"p.asuka:1:1", "p.asuka:1:2", "p.asuka:2:3", "p.asuka:2:6", "p.asuka:2:9", "p.asuka:2:10", "p.asuka:2:12", "p.asuka:2:12", "p.asuka:2:12", "p.asuka:3:2"}
 	for i := 0; ; i++ {
 		pos, tok, lit := s.Scan()
 		if tok == EOF {

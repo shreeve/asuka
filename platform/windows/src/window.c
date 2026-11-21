@@ -413,7 +413,7 @@ void wh_setting_changed(const wchar_t *what) {
 void wh_set_dark(bool dark) {
 	H.dark = dark;
 	wh_set_app_dark(dark);
-	wh_palette(&H.theme, dark, H.accent);
+	wh_palette(&H.theme, dark, wh_accent(dark));
 	wh_clear_menu_styles();
 	wh_clear_brushes();
 	wh_set_dark_title_bar(H.window, dark);

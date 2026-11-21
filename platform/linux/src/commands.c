@@ -81,6 +81,8 @@ void lx_command(node *n, ak_cmd c, ak_span args) {
 	}
 	case AK_CMD_ACCENT:
 		H.accent = ak_read_u64(&r);
+		ak_read_u8(&r);  // Android's wallpaper colors
+		H.accent_dark = ak_read_u64(&r);  // 0 past the end: accent's
 		lx_update_css();
 		lx_theme_changed();
 		return;

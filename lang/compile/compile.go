@@ -533,6 +533,9 @@ func (l *loader) compile(root *unit) *Result {
 		return res
 	}
 	accent, accentFlags, accentDark, err := appAccent(root.dir)
+	if err == nil {
+		err = checkWebColors(root.dir)
+	}
 	if err != nil {
 		pos := syntax.Position{Filename: filepath.Join(root.dir, "asuka.toml"), Line: 1, Column: 1}
 		res.Diags = append(res.Diags, check.NewDiagnostic(pos, pos, diag.InvalidProject, "%s", err.Error()))
@@ -692,6 +695,40 @@ func wireColor(key, s string) (uint64, error) {
 		return 0, fmt.Errorf("asuka.toml: %s %q (want #rrggbb or #rrggbbaa)", key, s)
 	}
 	return 2<<32 | v, nil
+}
+
+// checkWebColors checks asuka.toml's [web.colors], the web host's
+// palette, which the CLI writes into the page: each color is "#rrggbb"
+// or "#rrggbbaa", as the accent is.
+func checkWebColors(dir string) error {
+	if dir == "" || strings.HasPrefix(dir, "pkg:") {
+		return nil
+	}
+	b, err := os.ReadFile(filepath.Join(dir, "asuka.toml"))
+	if err != nil {
+		return nil
+	}
+	var m struct {
+		Web struct {
+			Colors map[string]string `json:"colors"`
+		} `json:"web"`
+	}
+	if toml.Unmarshal(b, &m) != nil {
+		return nil // the CLI reports the manifest's own errors
+	}
+	keys := make([]string, 0, len(m.Web.Colors))
+	for k := range m.Web.Colors {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		v := m.Web.Colors[k]
+		h := strings.TrimPrefix(v, "#")
+		if _, err := strconv.ParseUint(h, 16, 32); (len(h) != 6 && len(h) != 8) || err != nil {
+			return fmt.Errorf("asuka.toml: web.colors.%s %q (want #rrggbb or #rrggbbaa)", k, v)
+		}
+	}
+	return nil
 }
 
 // nativeClass is what a package's platforms' code registers its native

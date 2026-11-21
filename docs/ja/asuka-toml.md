@@ -15,6 +15,7 @@ version = "1.2.0"
 build = 7
 icon = "icon.png"
 accent = "#7c3aed"
+accentDark = "#a78bfa"
 scheme = "notes"
 links = ["notes.example.com"]
 shareTarget = true
@@ -62,6 +63,7 @@ github = "you/notes"
 | `icon` | パス | なし（プラットフォームの汎用アイコン） | 1024×1024 の正方形の PNG です。iOS 向けには透明部分を含めないでください。ビルドごとに、そのプラットフォームが必要とするサイズが作られます。App Store に出すには必須です。 |
 | `alternateIcons` | テーブル | なし | アプリが自分のアイコンの代わりに表示できるほかのアイコンを、名前ごとに指定します：`dark = "icons/dark.png"`。`icon` と同じく正方形の PNG です。名前は英字と数字で、英字で始めます。切り替えは `platform/appicon` で行います（[アプリのアイコン](device.md#アプリのアイコンplatformappicon)）。 |
 | `accent` | 色 | プラットフォームの色 | `"#rrggbb"` または `"#rrggbbaa"`。iOS では tint、Android では Material 3 のカラースキームのシード、Mac では `Accent`、塗りつぶしのボタン、リンクの色（AppKit 自身のコントロールはユーザーの設定した色のまま）、Windows ではコントロールのアクセントカラー、Linux では libadwaita のアクセントカラー、Web ではページとマニフェストの `theme_color` になります。 |
+| `accentDark` | 色 | `accent` | ダークモードのアクセントカラーで、書き方は `accent` と同じです。iOS、Mac、Windows、Linux、Web では、アプリがダークで表示されているあいだ（システムの外観に従っているときも、`appearance.setColorScheme(.dark)` を呼んだときも）、`.accent` とコントロールがこの色を使います。Android の Material 3 のカラースキームはダーク用の色も `accent` から作るので、この値は使いません。`accent` がなければ、ライトモードではプラットフォームの色になります。 |
 | `orientations` | 文字列の配列 | 両方 | `"portrait"`、`"landscape"`。スマートフォンでアプリが対応する画面の向きです。iPad では Split View とステージマネージャに必要なので、四つの向きすべてに対応します。Android 16 では、タブレットと折りたたみ端末でこの指定は無視されます。 |
 | `scheme` | 文字列 | なし | アプリの URL スキームです。iOS、Android、Mac、Windows、Linux で、`notes://` の URL がアプリを開き、アプリの `on openURL(url)` がその URL を受け取ります。英字、数字、`+`、`-`、`.` を使い、先頭は英字にします。[ディープリンク](navigation.md#ディープリンク)を参照してください。 |
 | `links` | 文字列の配列 | なし | `example.com` のようなドメインで、その https のリンクがアプリを開きます。iOS のユニバーサルリンクと Android の App Links です。ドメイン側で関連付けのファイルを配信します。[ディープリンク](navigation.md#ディープリンク)を参照してください。 |

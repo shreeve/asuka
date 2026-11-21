@@ -414,6 +414,15 @@ accent = "#7c3aed"
 
 アクセントカラーを指定しなければ、プラットフォームのものが使われます。macOS と Windows ではユーザーが選んだアクセントカラー（macOS は「システム設定」>「外観」、Windows は「設定」>「個人用設定」>「色」）、Linux では libadwaita の青、Web では Asuka 独自の青です。[配布](shipping.md)も参照してください。
 
+白い背景で読みやすい色でも、暗い背景では暗すぎることがあります。`accentDark` でダークモードのアクセントカラーを指定できます。
+
+```toml
+accent = "#2563eb"
+accentDark = "#93c5fd"
+```
+
+iOS、macOS、Windows、Linux、Web では、アプリがダークで表示されているとき、システムに従っている場合でも、アプリが自分でダークにしている場合（後述）でも、`.accent` とコントロールがこの色を使い、ライトに戻ると `accent` に戻ります。指定しなければ、どちらのモードでも `accent` が使われます。Android は `accent` そのものをカラースキームのシードにしてダーク用の色調を作るので、`accentDark` は使いません。
+
 ## ライトとダーク
 
 アプリはシステムの外観に従います。iOS と macOS のダークモード、Android のダークテーマ、Windows のアプリモード（「設定」>「個人用設定」>「色」）、GNOME のダークスタイル、ブラウザーの `prefers-color-scheme` です。アプリ独自の外観設定と同じように、システムの設定にかかわらずライトかダークで表示することもできます（SwiftUI の `preferredColorScheme`、Android では AppCompat のナイトモード、macOS ではアプリの `NSAppearance`、Linux では libadwaita のスタイルマネージャーにあたります）。[アプリ](navigation.md)を参照してください。セマンティックカラー、プラットフォームのコントロール、システムバーは、アプリを作り直すことなく切り替わり、今どちらなのかは環境の `dark` でわかります。ユーザーの選択は [`std/store`](../stdlib.md) で保存しましょう。

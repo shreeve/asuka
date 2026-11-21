@@ -1,0 +1,3 @@
+name = "Text Shrink"
+id = "dev.asuka.textshrink"
+orientations = ["portrait"]

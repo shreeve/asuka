@@ -1,0 +1,43 @@
+// Text Shrink shows a long one-line text in a row 200 points wide beside
+// a green square 40 points wide (e2e's TestTextShrink*): the text, red,
+// its text red too, shrinks to the 160 points left, cut short. Above it,
+// a magenta square 48 points high that the test measures it against.
+
+component TextShrink {
+  View {
+    grow: 1
+    justify: .center
+    align: .center
+    gap: 24
+    background: #ffffff
+
+    View {
+      width: 48
+      height: 48
+      background: #ff00ff
+    }
+    Row {
+      width: 200
+      align: .center
+      Text("A long line of text that is cut short at the end of its row") {
+        lines: 1
+        shrink: 1
+        color: #ff0000
+        background: #ff0000
+      }
+      View {
+        width: 40
+        height: 40
+        shrink: -1
+        background: #00ff00
+      }
+    }
+  }
+}
+
+app { TextShrink() }
+
+test "the long line beside the square" {
+  let app = mount(TextShrink())
+  app.expect("A long line of text that is cut short at the end of its row")
+}

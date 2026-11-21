@@ -207,6 +207,7 @@ static int start_module(ak_module *m, bool mount, bool fresh, char **err) {
 	ak_ui_unmount();
 	if (module_owner) ak_owner_dispose(module_owner);
 	module_owner = NULL;
+	ak_trace_forget();  // the last error thrown may be of the old module's types
 	if (module) ak_module_release(module);
 	module = m;
 	if (keeping) ak_keep_use(shape_named, m);
@@ -260,6 +261,7 @@ void asuka_unload(void) {
 	ak_ui_unmount();
 	if (module_owner) ak_owner_dispose(module_owner);
 	module_owner = NULL;
+	ak_trace_forget();
 	if (module) ak_module_release(module);
 	module = NULL;
 }

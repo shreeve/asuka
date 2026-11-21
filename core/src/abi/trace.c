@@ -51,12 +51,19 @@ void ak_trace_start(void) {
 	ak_retrace_hook = on_retrace;
 }
 
+void ak_trace_forget(void) {
+	if (T.traced) ak_release(T.traced);
+	T.traced = NULL;
+	T.vm[0] = 0;
+	T.c[0] = 0;
+	T.nc = 0;
+}
+
 void ak_trace_stop(void) {
 	ak_throw_hook = NULL;
 	ak_frame_hook = NULL;
 	ak_retrace_hook = NULL;
-	if (T.traced) ak_release(T.traced);
-	T.traced = NULL;
+	ak_trace_forget();
 }
 
 void ak_trace_of(const void *err, const char **c, const char **vm) {

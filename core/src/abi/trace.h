@@ -12,6 +12,10 @@
 // ak_trace_stop stops, and lets the last one go.
 void ak_trace_start(void);
 void ak_trace_stop(void);
+// ak_trace_forget lets the last error thrown go and keeps tracing: its
+// module is about to go (a reload), and an error of the module's own
+// types can't outlive it, since freeing one reads its shape.
+void ak_trace_forget(void);
 // ak_trace_of is err's trace: its compiled frames' lines (*c) and the
 // VM's (*vm), both "" when err isn't the last error thrown. Valid until
 // the next error is thrown.

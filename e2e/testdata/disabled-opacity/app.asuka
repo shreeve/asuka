@@ -1,0 +1,25 @@
+// Disabled opacity shows each kind of control disabled (e2e's
+// TestDisabledOpacityWeb): a disabled control is drawn at one opacity,
+// whatever its kind.
+
+component DisabledOpacity {
+  state name = "Ada"
+  state on = true
+  state choice = 0
+  state count = 1.0
+
+  SafeArea {
+    padding: 16
+    gap: 12
+
+    Text("ready")
+    Button("Plain") { disabled: true }
+    Button("Filled") { variant: .filled; disabled: true }
+    TextField { bind text: name; disabled: true }
+    Toggle { bind on: on; disabled: true }
+    Segmented(["One", "Two"]) { bind selected: choice; disabled: true }
+    Stepper { bind value: count; disabled: true }
+  }
+}
+
+app { DisabledOpacity() }

@@ -201,7 +201,7 @@
 .asuka-button[data-variant="bordered"] { background: var(--fill, var(--asuka-background)); box-shadow: inset 0 0 0 1px var(--asuka-separator); }
 .asuka-button[data-variant="bordered"]:hover { background: var(--fill, var(--asuka-fill)); }
 .asuka-button:active { opacity: 0.7; }
-.asuka-button:disabled { opacity: 0.4; cursor: default; filter: none; }
+.asuka-button:disabled { opacity: 0.5; cursor: default; filter: none; }
 
 /* Fields */
 
@@ -261,7 +261,7 @@ textarea.asuka-field { overflow-y: auto; display: block; }
 .asuka-switch:checked::before { transform: translateX(20px); }
 [dir="rtl"] .asuka-switch:checked::before { transform: translateX(-20px); }
 [dir="rtl"] .asuka-switch::before { left: auto; right: 2px; }
-.asuka-switch:disabled { opacity: 0.4; cursor: default; }
+.asuka-switch:disabled { opacity: 0.5; cursor: default; }
 .asuka-checkbox { width: 20px; height: 20px; margin: 2px; accent-color: var(--tint, var(--asuka-accent)); cursor: pointer; }
 
 .asuka-slider { width: 100%; margin: 0; height: 28px; cursor: pointer; }
@@ -290,12 +290,12 @@ textarea.asuka-field { overflow-y: auto; display: block; }
 .asuka-stepper button { width: 46px; height: 32px; border: none; background: none; font: inherit; font-size: 20px; line-height: 1; color: var(--asuka-label); cursor: pointer; }
 .asuka-stepper button + button { box-shadow: inset 1px 0 0 var(--asuka-separator); }
 .asuka-stepper button:hover:not(:disabled) { background: var(--asuka-fill); }
-.asuka-stepper button:disabled { opacity: 0.35; cursor: default; }
+.asuka-stepper button:disabled { opacity: 0.5; cursor: default; }
 
 .asuka-segmented { --tint: var(--asuka-label); display: inline-flex; padding: 2px; gap: 2px; border-radius: 9px; background: var(--asuka-fill); white-space: nowrap; }
 .asuka-segmented button { flex: 1 1 0; padding: 5px 14px; border: none; border-radius: 7px; background: none; font: inherit; color: var(--asuka-label); cursor: pointer; transition: background-color 0.15s; }
 .asuka-segmented button[aria-checked="true"] { background: var(--asuka-card); box-shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 0 0 0.5px rgb(0 0 0 / 0.04); font-weight: 600; }
-.asuka-segmented button:disabled { opacity: 0.4; }
+.asuka-segmented button:disabled { opacity: 0.5; }
 
 .asuka-dots { --tint: var(--asuka-label); display: inline-flex; gap: 0; padding: 4px 8px; }
 .asuka-dots button { width: 16px; height: 18px; padding: 0; border: none; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -415,7 +415,7 @@ textarea.asuka-field { overflow-y: auto; display: block; }
 .asuka-fab.asuka-destructive { background: var(--asuka-red); }
 .asuka-fab:hover { filter: brightness(1.08); }
 .asuka-fab:active { filter: brightness(0.92); }
-.asuka-fab:disabled { opacity: 0.4; cursor: default; filter: none; }
+.asuka-fab:disabled { opacity: 0.5; cursor: default; filter: none; }
 @media (prefers-reduced-motion: reduce) { .asuka-fab, .asuka-fab span { transition: none; } }
 .asuka-bar-search { padding: 0 12px 10px; flex: none; }
 .asuka-bar-search[hidden] { display: none; }

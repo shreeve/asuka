@@ -3,8 +3,9 @@
    menus, lists). Controls are the browser's, in the app's accent. */
 
 .asuka {
-  --asuka-accent: #0a66e0;
+  --asuka-accent-light: #0a66e0;
   --asuka-accent-dark: #3d8bff;
+  --asuka-accent: var(--asuka-accent-light);
   --asuka-label: #000;
   --asuka-secondary-label: rgb(60 60 67 / 0.62);
   --asuka-tertiary-label: rgb(60 60 67 / 0.32);

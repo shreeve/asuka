@@ -1,0 +1,4 @@
+name = "Accent dark"
+id = "dev.asuka.accentdark"
+accent = "#2563eb"
+accentDark = "#93c5fd"

@@ -1,0 +1,24 @@
+// DialogFocus is a web e2e's app (e2e/dialogfocus_test.go): a sheet with a
+// line of text and a Close button, for the sheet's focus ring (none).
+
+component Dialogs {
+  state open = false
+
+  Column {
+    padding: 12
+    gap: 6
+    Text("status: ready")
+    Button("Open") { on press { open = true } }
+    Sheet {
+      bind open: open
+      Column {
+        padding: 12
+        gap: 6
+        Text("Sheet title")
+        Button("Close") { on press { open = false } }
+      }
+    }
+  }
+}
+
+app { Dialogs() }

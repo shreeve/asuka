@@ -648,8 +648,18 @@ const picker = {
     else n.input.removeAttribute("aria-label");
   },
   measure(h, n, c) {
-    const r = rectOf(h, n.el, n.input);
-    return [fitWidth(c, r.width, r.width), r.height];
+    // Its select as wide as its widest item, not held to its box's width
+    // as last laid out (max-width), which can be none yet.
+    const box = n.el.style, sel = n.input.style;
+    const saved = [box.width, sel.maxWidth];
+    box.width = "max-content";
+    sel.maxWidth = "none";
+    try {
+      const r = rectOf(h, n.el, n.input);
+      return [fitWidth(c, r.width, r.width), r.height];
+    } finally {
+      [box.width, sel.maxWidth] = saved;
+    }
   },
 };
 

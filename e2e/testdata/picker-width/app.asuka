@@ -1,0 +1,30 @@
+// Picker width shows two pickers sized to their items, one in a column
+// that doesn't stretch it and one in a row (e2e/picker_width_test.go).
+
+component PickerWidth {
+  state chosen = 1
+
+  Column {
+    padding: 16
+    gap: 12
+    align: .start
+    Text("ready")
+    Picker(["Solo", "Couple pack for two"]) {
+      bind selected: chosen
+      prompt: "Pack"
+    }
+    Row {
+      Picker(["Solo", "Couple pack for two"]) {
+        bind selected: chosen
+        prompt: "Pack"
+      }
+    }
+  }
+}
+
+app { PickerWidth() }
+
+test "the pickers show" {
+  let app = mount(PickerWidth())
+  app.expect("ready")
+}

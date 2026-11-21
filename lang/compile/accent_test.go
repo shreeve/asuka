@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/egoist/asuka/lang/diag"
 )
 
 // An app's asuka.toml accent goes into its init (ui.set_accent), as the
@@ -43,5 +45,27 @@ func TestAccent(t *testing.T) {
 	out, err := runBoth(t, app(t, "accent = \"#ff000080\"\n", appSrc+"test \"runs\" { let a = mount(Text(\"x\")); a.expect(\"x\") }\n").Module)
 	if err != nil || strings.Contains(out, "FAIL") {
 		t.Fatalf("%v\n%s", err, out)
+	}
+}
+
+// asuka.toml's [web.colors] in the wrong form is the project's error
+// (invalid-project), naming the key; in the right form it compiles.
+func TestWebColorsChecked(t *testing.T) {
+	app := func(t *testing.T, toml string) *Result {
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, "asuka.toml"), []byte(toml), 0o644)
+		os.WriteFile(filepath.Join(dir, "app.asuka"), []byte("app { Text(\"Hi\") }\n"), 0o644)
+		res, err := Dir(dir, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	res := app(t, "[web.colors]\nlabel = \"#16181d\"\nseparatorDark = \"#3a3d4\"\n")
+	if len(res.Diags) != 1 || res.Diags[0].Code != diag.InvalidProject.Name || !strings.Contains(res.Diags[0].Msg, `web.colors.separatorDark "#3a3d4"`) {
+		t.Fatalf("a bad web color: %+v", res.Diags)
+	}
+	if err := app(t, "[web.colors]\nlabel = \"#16181d\"\nlabelDark = \"#e8e9eb80\"\n").Err(); err != nil {
+		t.Fatal(err)
 	}
 }

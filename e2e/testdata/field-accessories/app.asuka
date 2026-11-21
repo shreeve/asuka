@@ -1,0 +1,44 @@
+// Field accessories is an e2e's app (e2e/fieldkeyboard_test.go): two
+// fields, each with its own bar on the keyboard, and the keyboard heights
+// the app is given while focus moves from one to the other.
+
+// a field's bar: Done, named for its field, so the screen tells which
+// bar is on the keyboard
+component Bar(field: Ref, name: string) {
+  Row {
+    padding: [6, 16]; justify: .end; material: .bar
+    Button("Done {name}") { on press { field.blur() } }
+  }
+}
+
+component FieldAccessories {
+  state first = ""
+  state second = ""
+  // the keyboard heights since Focus second was pressed, each change
+  state seen: [int] = []
+  state watching = false
+  let firstField = Ref()
+  let secondField = Ref()
+  let env = environment()
+
+  effect(env.keyboard) { if watching { seen = seen + [int(env.keyboard)] } }
+
+  Column {
+    grow: 1; gap: 12
+    padding: [env.safeTop + 16, 16, max(env.safeBottom, env.keyboard) + 16, 16]
+    Text("ready")
+    Text(if env.keyboard > 0 { "keyboard up" } else { "keyboard down" })
+    Text("seen: {seen.map(k => "{k}").joined(separator: " ")}")
+    TextField { bind text: first; label: "First"; ref: firstField; accessory { Bar(firstField, name: "first") } }
+    TextField { bind text: second; label: "Second"; ref: secondField; accessory { Bar(secondField, name: "second") } }
+    Button("Focus first") { on press { firstField.focus() } }
+    Button("Focus second") { on press { seen = [int(env.keyboard)]; watching = true; secondField.focus() } }
+  }
+}
+
+app { FieldAccessories() }
+
+test "the fields are there" {
+  let app = mount(FieldAccessories())
+  app.expect("ready")
+}

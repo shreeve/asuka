@@ -1,0 +1,32 @@
+// Picker Style shows a picker with a background of the app's (e2e's
+// TestPickerStyle*): red, 200 by 40 points, under a magenta square 48
+// points high that the test measures it against.
+
+component PickerStyle {
+  View {
+    grow: 1
+    justify: .center
+    align: .center
+    gap: 24
+    background: #ffffff
+
+    View {
+      width: 48
+      height: 48
+      background: #ff00ff
+    }
+    Picker(["One", "Two"]) {
+      selected: 0
+      width: 200
+      height: 40
+      background: #ff0000
+    }
+  }
+}
+
+app { PickerStyle() }
+
+test "the picker under the square" {
+  let app = mount(PickerStyle())
+  app.expect("One")
+}

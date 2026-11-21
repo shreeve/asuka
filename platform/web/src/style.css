@@ -13,6 +13,7 @@
   --asuka-grouped-background: #f2f2f7;
   --asuka-secondary-grouped-background: #fff;
   --asuka-separator: rgb(60 60 67 / 0.22);
+  --asuka-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
   --asuka-red: #ff3b30;
   --asuka-orange: #ff9500;
   --asuka-yellow: #ffcc00;
@@ -264,7 +265,17 @@ textarea.asuka-field { overflow-y: auto; display: block; }
 .asuka-checkbox { width: 20px; height: 20px; margin: 2px; accent-color: var(--tint, var(--asuka-accent)); cursor: pointer; }
 
 .asuka-slider { width: 100%; margin: 0; height: 28px; cursor: pointer; }
-.asuka-select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--asuka-separator); background: var(--asuka-background); color: var(--asuka-label); max-width: 100%; }
+/* A picker's look is its box's (a hairline, an outline as an app's border
+   is, its corners, the background), which an app's own style replaces, as
+   any view's; the select in it draws no frame of its own, and the box
+   draws the chevron, not the browser. */
+.asuka-select-box { border-radius: 8px; background: var(--asuka-background); outline: 1px solid var(--asuka-separator); outline-offset: -1px; }
+.asuka-select-box::after { content: ""; position: absolute; top: 50%; right: 8px; width: 12px; height: 12px; margin-top: -6px; background: var(--asuka-secondary-label); -webkit-mask: var(--asuka-chevron) center / contain no-repeat; mask: var(--asuka-chevron) center / contain no-repeat; pointer-events: none; }
+/* The keyboard's focus rings the box, which an app sizes, not the select
+   inside it, which may be taller (its own padding) and isn't drawn. */
+.asuka-select-box:has(> .asuka-select:focus-visible) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--asuka-accent) 40%, transparent); }
+.asuka .asuka-select:focus-visible { outline: none; }
+.asuka-select { -webkit-appearance: none; appearance: none; flex: 1 0 auto; margin: 0; font: inherit; padding: 6px 28px 6px 8px; border: none; border-radius: inherit; background: transparent; color: var(--asuka-label); max-width: 100%; }
 .asuka-color { width: 32px; height: 32px; padding: 0; border: none; border-radius: 50%; background: none; cursor: pointer; }
 .asuka-color::-webkit-color-swatch-wrapper { padding: 0; }
 .asuka-color::-webkit-color-swatch { border: 1px solid var(--asuka-separator); border-radius: 50%; }

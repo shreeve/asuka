@@ -1,0 +1,23 @@
+// Accent dark has an accent for light mode and another for dark mode
+// (asuka.toml's accent and accentDark; e2e's TestAccentDarkWeb): the
+// buttons show the app dark or as the system is.
+
+import platform/appearance
+
+component AccentDark {
+  SafeArea {
+    padding: 16
+    gap: 12
+
+    Text("Accent") { color: .accent }
+    Button("Dark") {
+      on press { appearance.setColorScheme(.dark) }
+    }
+    Button("System") {
+      on press { appearance.setColorScheme(.system) }
+    }
+    Text("ready")
+  }
+}
+
+app { AccentDark() }

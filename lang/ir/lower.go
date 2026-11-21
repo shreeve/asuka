@@ -66,11 +66,13 @@ type Lowerer struct {
 
 // Options say how to lower.
 type Options struct {
-	// Accent and AccentFlags are the app's accent color (the wire's
-	// Color, 0: the platform's) and its flags, which the app's init gives
-	// the core (ui.set_accent).
+	// Accent, AccentFlags and AccentDark are the app's accent color (the
+	// wire's Color, 0: the platform's), its flags and its color in dark
+	// mode (0: Accent in both), which the app's init gives the core
+	// (ui.set_accent).
 	Accent      uint64
 	AccentFlags uint8
+	AccentDark  uint64
 	// Lang and Direction force the language and the direction the app
 	// shows for this run (asuka dev's --lang and --dir): the init says so
 	// first (i18n.force), so that every platform's player follows.
@@ -738,8 +740,8 @@ func (l *Lowerer) initBody(b *fb) {
 	// An app sets its accent first, always (0 when it has none), so a
 	// player that ran another app drops that one's.
 	if root := l.prog.Root; root != nil && root.App != nil {
-		c, f := b.konst(int64(l.opts.Accent)), b.konst(int64(l.opts.AccentFlags))
-		b.callB("ui.set_accent", bc.KVoid, c, f)
+		c, f, d := b.konst(int64(l.opts.Accent)), b.konst(int64(l.opts.AccentFlags)), b.konst(int64(l.opts.AccentDark))
+		b.callB("ui.set_accent", bc.KVoid, c, f, d)
 	}
 	for _, p := range l.prog.Packages {
 		for _, g := range p.Globals {

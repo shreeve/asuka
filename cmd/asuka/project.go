@@ -192,6 +192,7 @@ func (a *asukaApp) hostConfig(platform, target string, updates bool) appconfig.C
 		Version:           a.cfg.Version,
 		Build:             fmt.Sprint(a.cfg.Build),
 		Accent:            a.cfg.Accent,
+		AccentDark:        a.cfg.AccentDark,
 		Scheme:            a.cfg.Scheme,
 		Lang:              devLang,
 		Direction:         devDirection,

@@ -80,6 +80,15 @@ static bool automated(void) {
 
 // ---- Starting ----
 
+// hex_color is asuka-app.json's "#rrggbb" or "#rrggbbaa" as a color.
+static ak_color hex_color(const char *hex) {
+	unsigned r = 0, g = 0, b = 0, a = 255;
+	const char *s = hex[0] == '#' ? hex + 1 : hex;
+	if (strlen(s) == 8) sscanf(s, "%2x%2x%2x%2x", &r, &g, &b, &a);
+	else sscanf(s, "%2x%2x%2x", &r, &g, &b);
+	return ak_rgba((uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a);
+}
+
 // new_host makes the host's windows: the message window, the parking
 // window views wait in, the app's window.
 static void new_host(void) {
@@ -106,15 +115,10 @@ static void new_host(void) {
 	if (scheme && !strcmp(scheme, "light")) H.dark = false, H.scheme = AK_COLOR_SCHEME_LIGHT;
 	if (scheme && !strcmp(scheme, "dark")) H.dark = true, H.scheme = AK_COLOR_SCHEME_DARK;
 	free(scheme);
-	if (H.config.accent) {
-		unsigned r = 0, g = 0, b = 0, a = 255;
-		const char *s = H.config.accent[0] == '#' ? H.config.accent + 1 : H.config.accent;
-		if (strlen(s) == 8) sscanf(s, "%2x%2x%2x%2x", &r, &g, &b, &a);
-		else sscanf(s, "%2x%2x%2x", &r, &g, &b);
-		H.accent = ak_rgba((uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a);
-	}
+	if (H.config.accent) H.accent = hex_color(H.config.accent);
+	if (H.config.accent_dark) H.accent_dark = hex_color(H.config.accent_dark);
 	wh_set_app_dark(H.dark);
-	wh_palette(&H.theme, H.dark, H.accent);
+	wh_palette(&H.theme, H.dark, wh_accent(H.dark));
 	wh_read_intl();
 	wh_make_window();
 	wh_environment(&H.env);

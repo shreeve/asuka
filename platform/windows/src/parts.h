@@ -60,7 +60,7 @@ void wh_command(node *n, uint16_t cmd, const uint8_t *args, size_t len);
 void wh_pop_up(node *n, HWND anchor, bool below);
 void wh_pop_up_actions(node *target, HWND anchor, node *at, const actions *a, int64_t base);
 bool wh_animate_frame(node *n, const float f[4]);
-void wh_set_accent(ak_color c);
+void wh_set_accent(ak_color c, ak_color dark);
 void wh_set_color_scheme(int s);
 
 // ---- window.c / winctl.c / titlebar.c / placement.c ----

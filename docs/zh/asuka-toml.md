@@ -13,6 +13,7 @@ version = "1.2.0"
 build = 7
 icon = "icon.png"
 accent = "#7c3aed"
+accentDark = "#a78bfa"
 scheme = "notes"
 links = ["notes.example.com"]
 shareTarget = true
@@ -59,6 +60,7 @@ github = "you/notes"
 | `build` | 整数 | `1` | 构建编号，每次上传都必须递增。`asuka publish` 会自动把构建编号为商店中现有最大编号的下一个，所以这里只是起始值。Windows 上 `.exe` 的文件版本由 `version` 和 `build` 组成（`1.2.0.7`）。 |
 | `icon` | 路径 | 无，使用平台的通用图标 | 一张 1024×1024 的正方形 PNG，用于 iOS 时不能有透明区域。每个平台的构建会自动生成该平台需要的各种尺寸。上架 App Store 必须提供。 |
 | `accent` | 颜色 | 平台默认 | `"#rrggbb"` 或 `"#rrggbbaa"`。在 iOS 上是 tint 色；在 Android 上是 Material 3 配色方案的种子色；在 Mac 上是 `Accent`、填充按钮和链接的颜色（AppKit 自带的控件仍然使用用户选择的颜色）；在 Windows 上是控件的强调色，在 Linux 上是 libadwaita 的强调色；在 Web 上是页面的强调色以及 manifest 的 `theme_color`。 |
+| `accentDark` | 颜色 | `accent` | 深色模式下的强调色，写法与 `accent` 相同。在 iOS、Mac、Windows、Linux 和 Web 上，只要应用以深色显示（跟随系统外观，或调用了 `appearance.setColorScheme(.dark)`），`.accent` 和控件就会改用它。Android 的 Material 3 配色方案会从 `accent` 推导出深色配色，所以不使用它。没有设置 `accent` 时，浅色模式使用平台默认的强调色。 |
 | `orientations` | 字符串数组 | 两者都支持 | `"portrait"`、`"landscape"`：应用在手机上支持的方向。iPad 上总是支持全部四个方向，因为分屏浏览和台前调度要求如此；Android 16 在平板和折叠屏设备上也会忽略这项设置。 |
 | `scheme` | 字符串 | 无 | 应用的 URL scheme：`notes://` 开头的 URL 会打开应用，并由应用的 `on openURL(url)` 接收，支持 iOS、Android、Mac、Windows 和 Linux。只能包含字母、数字、`+`、`-` 和 `.`，并以字母开头。见[深度链接](navigation.md#深度链接)。 |
 | `links` | 字符串数组 | 无 | 域名，如 `example.com`，指向这些域名的 https 链接会打开应用：即 iOS 的 universal links 和 Android 的 App Links。域名需要提供关联文件。见[深度链接](navigation.md#深度链接)。 |

@@ -787,7 +787,8 @@ export class Host {
       case Command.Accent: {
         const r = new Reader(args);
         this.accent = r.u64();
-        color.setAccent(this, this.accent);
+        r.u8(); // Android's wallpaper colors
+        color.setAccent(this, this.accent, r.atEnd ? 0 : r.u64());
         break;
       }
       case Command.ColorScheme:

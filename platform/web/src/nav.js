@@ -15,7 +15,10 @@
 //     wide one. Escape, a click outside or a swipe down dismisses it. A
 //     FullScreen one covers the whole page (a Window's panel's content,
 //     for one declared in a Window), sliding up; only Escape (or going
-//     back) dismisses it.
+//     back) dismisses it. A Movable one on a wide window is a card the
+//     user can move by its background (a Resizable one resize by its
+//     corner), with no bar (its own header its top), centered over the page until moved;
+//     Escape dismisses it, a click outside doesn't.
 //   - An Alert is a modal <dialog> too; an action sheet's buttons a list.
 //   - A Popover is a popover element next to what it points at.
 //   - A SplitView is a sidebar beside its detail Stack; on a narrow
@@ -80,8 +83,9 @@ function iconButton(symbol, label, rtl) {
 }
 
 /**
- * onBackdropPress calls f for a press on dialog d's backdrop (d itself,
- * around its content): a click there whose press began there too. A tap
+ * onBackdropPress calls f, with the click, for a press on dialog d's
+ * backdrop (d itself, around its content): a click there whose press began
+ * there too. A tap
  * that opens a dialog as it ends (Press is the pointerup's) is followed in
  * iOS Safari by its click, hit-tested at the finger once the dialog shows:
  * on the backdrop, though the press began on what opened it.
@@ -92,7 +96,7 @@ function onBackdropPress(d, f) {
   d.addEventListener("click", (e) => {
     const pressed = down;
     down = false;
-    if (e.target === d && pressed) f();
+    if (e.target === d && pressed) f(e);
   });
 }
 
@@ -105,7 +109,7 @@ export class Navigation {
     this.routes = null; // the main window's Router's address (history.js)
     addEventListener("popstate", (e) => this.popstate(e));
     addEventListener("keydown", (e) => this.key(e));
-    addEventListener("pointerdown", (e) => this.pressOutside(e), true);
+    addEventListener("pointerdown", (e) => { this.pressed = e.target; this.pressOutside(e); }, true);
     this.edgeSwipe();
   }
 
@@ -536,6 +540,11 @@ export class Navigation {
     const d = document.createElement("dialog");
     d.className = n.fullScreen ? "asuka-sheet-dialog asuka-full-screen" : "asuka-sheet-dialog";
     this.h.container.appendChild(d);
+    // Movable on a wide window: no bar, its content all of it (its own
+    // header its top), moved by its background, a resizable one resized
+    // by its corner.
+    n.mv = n.movable && !n.fullScreen && this.wide() ? { x: 0, y: 0, w: 0, h: 0, minW: 240, minH: 120, moved: false, sized: false } : null;
+    if (n.mv) this.movableParts(n, d);
     d.appendChild(n.el);
     if (n.grabber && !n.fullScreen) {
       const g = div("asuka-grabber");
@@ -546,13 +555,25 @@ export class Navigation {
     n.shown = true;
     this.dialogs.push(n);
     d.addEventListener("cancel", (e) => { e.preventDefault(); this.dismiss(n); });
-    onBackdropPress(d, () => { if (!n.fullScreen) this.dismiss(n); });
+    // A press on its backdrop dismisses it; a movable one's only with
+    // DismissOutside, and only outside its card.
+    onBackdropPress(d, (e) => {
+      if (n.fullScreen) return;
+      if (n.mv) {
+        const r = d.getBoundingClientRect();
+        const out = e.clientX < r.left || e.clientX >= r.right || e.clientY < r.top || e.clientY >= r.bottom;
+        if (!n.dismissOutside || !out) return;
+      }
+      this.dismiss(n);
+    });
     d.showModal();
     this.sizeDialog(n);
     const wide = this.wide() && !n.fullScreen;
     const begin = () => {
       if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        d.animate(wide ? [{ opacity: 0, transform: "scale(0.96)" }, { opacity: 1, transform: "none" }] : [{ transform: "translateY(100%)" }, { transform: "none" }], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
+        // A movable one fades in where it opens, as a desktop's dialog does.
+        if (n.mv) d.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 120, easing: "cubic-bezier(0.2, 0, 0, 1)" });
+        else d.animate(wide ? [{ opacity: 0, transform: "scale(0.96)" }, { opacity: 1, transform: "none" }] : [{ transform: "translateY(100%)" }, { transform: "none" }], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
       }
     };
     if (this.fitsContent(n)) {
@@ -595,6 +616,43 @@ export class Navigation {
     begin();
   }
 
+  /** movableParts makes a movable sheet's dialog move by its background, and a resizable one's resize by its corner. */
+  movableParts(n, d) {
+    d.classList.add("asuka-movable");
+    // Its background: inside it (a press on the backdrop is the dialog's
+    // too), not a control, a pressable view, selectable text or a scroll
+    // bar, which keep their own presses.
+    const background = (e) => {
+      const t = e.target, r = d.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX >= r.right || e.clientY < r.top || e.clientY >= r.bottom) return false;
+      if (!(t instanceof Element) || t.closest("button, input, select, textarea, a, [contenteditable], .asuka-pressable, .asuka-selectable, .asuka-window-grip")) return false;
+      return !(t.clientWidth && e.offsetX > t.clientWidth) && !(t.clientHeight && e.offsetY > t.clientHeight);
+    };
+    this.drag(d, (dx, dy, at) => {
+      const m = n.mv, c = this.h.container.getBoundingClientRect();
+      at.x ??= m.x;
+      at.y ??= m.y;
+      // It stays where the pointer can take it again.
+      m.x = Math.min(Math.max(at.x + dx, c.left + 80 - m.w), c.right - 80);
+      m.y = Math.min(Math.max(at.y + dy, c.top), c.bottom - 40);
+      m.moved = true;
+      this.sizeDialog(n);
+    }, null, background);
+    if (!n.resizable) return;
+    const grip = div("asuka-window-grip");
+    d.append(grip);
+    this.drag(grip, (dx, dy, at) => {
+      const m = n.mv, c = this.h.container.getBoundingClientRect();
+      at.w ??= m.w;
+      at.h ??= m.h;
+      m.w = Math.min(Math.max(at.w + dx, m.minW), c.right - m.x);
+      m.h = Math.min(Math.max(at.h + dy, m.minH), c.bottom - m.y);
+      // Its corner moves, its other edges stay: no longer centered.
+      m.sized = m.moved = true;
+      this.sizeDialog(n);
+    });
+  }
+
   sizeDialog(n) {
     const c = this.h.container.getBoundingClientRect();
     const d = n.dialog;
@@ -622,6 +680,28 @@ export class Navigation {
       h = a.h;
       d.style.left = a.x + "px";
       d.style.top = a.y + "px";
+    } else if (n.kind === Kind.Sheet && n.mv) {
+      // A movable sheet: a wide sheet's size until the user resizes it,
+      // centered over the page (its Window's panel's content) until the
+      // user moves it.
+      const m = n.mv, w0 = this.panelOf(n);
+      const a = w0 ? this.panelArea(w0, c) : { x: c.left, y: c.top, w: c.width, h: c.height };
+      m.area = a;
+      d.classList.add("asuka-wide", "asuka-on-window");
+      if (!m.sized) {
+        // the room a Mac gives a movable sheet, so content as wide as a
+        // Mac's sheet fits without the core's narrowest-width pass
+        m.w = Math.min(c.width - 80, 640);
+        m.h = Math.min(c.height - 80, n.detents === 1 ? Math.max(c.height / 2, 320) : 720);
+      }
+      if (!m.moved) {
+        m.x = Math.round(a.x + (a.w - m.w) / 2);
+        m.y = Math.round(Math.max(a.y + (a.h - m.h) / 2, c.top + 8));
+      }
+      w = m.w;
+      h = m.h;
+      d.style.left = m.x + "px";
+      d.style.top = m.y + "px";
     } else if ((n.kind === Kind.Sheet) && this.panelOf(n)) {
       // A sheet of a Window's panel: a card over the panel's content,
       // as a desktop's sheet over its window.
@@ -654,9 +734,29 @@ export class Navigation {
     // A sheet as tall as its content is as big as the core laid it out
     // (fitSheet), its room what it reports: what the core fits it in.
     const room = [w, h];
-    if (n.fit && this.fitsContent(n)) {
+    if (n.fit && this.fitsContent(n) && !n.mv?.sized) {
+      // A movable one: its content's size, centered on that until moved.
       w = Math.min(n.fit[0], c.width);
       h = Math.min(n.fit[1], h);
+      const m = n.mv;
+      if (m) {
+        if (n.resizable) {
+          // The core fits it once: from now on its size is the one it
+          // has, the least the user's corner takes it to, and its room,
+          // which the core lays it out in.
+          m.w = m.minW = w;
+          m.h = m.minH = h;
+          m.sized = true;
+          room[0] = w;
+          room[1] = h;
+        }
+        if (!m.moved) {
+          m.x = Math.round(m.area.x + (m.area.w - w) / 2);
+          m.y = Math.round(Math.max(m.area.y + (m.area.h - h) / 2, c.top + 8));
+          d.style.left = m.x + "px";
+          d.style.top = m.y + "px";
+        }
+      }
     }
     d.style.width = w + "px";
     d.style.height = h + "px";
@@ -978,11 +1078,13 @@ export class Navigation {
     if (resizable) {
       const grip = div("asuka-window-grip");
       d.appendChild(grip);
-      this.drag(grip, (dx, dy) => {
+      this.drag(grip, (dx, dy, at) => {
         const wn = n.win;
         if (wn.maximized) return;
-        wn.w = this.h.windows.clamp(wn.w + dx, wn.minWidth || 200, wn.maxWidth);
-        wn.h = this.h.windows.clamp(wn.h - wn.bar + dy, wn.minHeight || 120, wn.maxHeight) + wn.bar;
+        at.w ??= wn.w;
+        at.h ??= wn.h - wn.bar;
+        wn.w = this.h.windows.clamp(at.w + dx, wn.minWidth || 200, wn.maxWidth);
+        wn.h = this.h.windows.clamp(at.h + dy, wn.minHeight || 120, wn.maxHeight) + wn.bar;
         this.sizeDialog(n);
       }, () => this.h.windows.save(n));
     }
@@ -992,10 +1094,13 @@ export class Navigation {
     n.shown = true;
     this.dialogs.push(n);
     if (title) {
-      this.drag(title, (dx, dy) => {
+      this.drag(title, (dx, dy, at) => {
         const wn = n.win;
         if (wn.maximized) return;
-        wn.x += dx; wn.y += dy;
+        at.x ??= wn.x;
+        at.y ??= wn.y;
+        wn.x = at.x + dx;
+        wn.y = at.y + dy;
         this.sizeDialog(n);
       }, () => this.h.windows.save(n));
     }
@@ -1107,21 +1212,27 @@ export class Navigation {
     if (!placed) for (const el of els) c.appendChild(el);
   }
 
-  drag(handle, move, end) {
-    let last = null;
+  /**
+   * drag calls move with how far the pointer is from where it pressed
+   * handle (from, if given, says whether a press starts one), and at, an
+   * object for the drag, where move keeps what it started from: what it
+   * drags follows where the pointer is, so past a limit it stays there
+   * until the pointer comes back. end, if given, is called as it ends.
+   */
+  drag(handle, move, end, from) {
+    let start = null, at = null;
     handle.addEventListener("pointerdown", (e) => {
-      if (e.target.closest("button")) return;
-      last = [e.clientX, e.clientY];
+      if (e.button !== 0 || e.target.closest("button") || (from && !from(e))) return;
+      start = [e.clientX, e.clientY];
+      at = {};
       handle.setPointerCapture(e.pointerId);
     });
     handle.addEventListener("pointermove", (e) => {
-      if (!last) return;
-      move(e.clientX - last[0], e.clientY - last[1]);
-      last = [e.clientX, e.clientY];
+      if (start) move(e.clientX - start[0], e.clientY - start[1], at);
     });
     handle.addEventListener("pointerup", () => {
-      if (last && end) end();
-      last = null;
+      if (start && end) end();
+      start = null;
     });
   }
 
@@ -1287,9 +1398,42 @@ export class Navigation {
       return;
     }
     if (escape && e.target.closest?.("input, textarea")) { e.target.blur(); return; }
+    if (e.key.toLowerCase() === "a" && (mac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey) && !e.altKey && !e.shiftKey &&
+        this.selectAll(e.target)) {
+      e.preventDefault();
+      return;
+    }
     if (backKey || escape) {
       if (this.back()) e.preventDefault();
     }
+  }
+
+  /**
+   * selectAll selects all of one selectable text, as select all (Cmd+A,
+   * Ctrl+A) does in a desktop's text view, rather than the page or the
+   * dialog with its title and buttons: the one the selection is in, else
+   * the one last pressed, else the only one in the frontmost dialog (the
+   * page). It says whether it did; not in a text field, which selects
+   * its own text.
+   */
+  selectAll(target) {
+    if (!(target instanceof Element) || target.closest("input, textarea, select, [contenteditable]")) return false;
+    const top = [...this.dialogs].reverse().find((d) => d.dialog?.isConnected)?.dialog;
+    const scope = top || this.h.container;
+    const within = (x) => {
+      const el = x instanceof Element ? x : x?.parentElement;
+      const t = el?.closest(".asuka-selectable");
+      return t && scope.contains(t) ? t : null;
+    };
+    const all = scope.querySelectorAll(".asuka-selectable");
+    const t = within(getSelection()?.anchorNode) || within(this.pressed) || (all.length === 1 ? all[0] : null);
+    if (!t) return false;
+    const r = document.createRange();
+    r.selectNodeContents(t);
+    const sel = getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+    return true;
   }
 
   /**
@@ -1695,6 +1839,9 @@ const sheet = {
     if (p === P.Sheet.Grabber) n.grabber = !!v;
     if (p === P.Sheet.Window) n.winID = v; // the window it's declared in: the root's, a Window's
     if (p === P.Sheet.FullScreen) n.fullScreen = !!v; // before Present
+    if (p === P.Sheet.Movable) n.movable = !!v; // before Present
+    if (p === P.Sheet.Resizable) n.resizable = !!v; // before Present
+    if (p === P.Sheet.DismissOutside) n.dismissOutside = !!v; // before Present
     if (p === P.Sheet.Routed) n.routed = !!v; // a Router's: the history goes back from it
   },
   frame() { return true; },

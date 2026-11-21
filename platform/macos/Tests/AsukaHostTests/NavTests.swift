@@ -266,6 +266,26 @@ final class NavTests: XCTestCase {
         XCTAssertTrue(navSentEvents.isEmpty)
     }
 
+    // A movable sheet's blocker over the window it's over: a press there
+    // dismisses the sheet as Escape does (its cancelOperation) when the
+    // sheet's DismissOutside said so, and otherwise only brings it forward.
+    @MainActor func testModalBlockerDismissOutside() throws {
+        final class Sheet: NSWindow {
+            var cancelled = 0
+            override func cancelOperation(_ sender: Any?) { cancelled += 1 }
+        }
+        let sheet = Sheet(contentRect: CGRect(x: 0, y: 0, width: 200, height: 100), styleMask: [.titled], backing: .buffered, defer: true)
+        let b = AsukaModalBlocker(frame: CGRect(x: 0, y: 0, width: 400, height: 300))
+        b.sheet = sheet
+        let press = try XCTUnwrap(NSEvent.mouseEvent(with: .leftMouseDown, location: CGPoint(x: 10, y: 10), modifierFlags: [], timestamp: 0,
+                                                     windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
+        b.mouseDown(with: press)
+        XCTAssertEqual(sheet.cancelled, 0, "a press dismissed a sheet without DismissOutside")
+        b.dismisses = true
+        b.mouseDown(with: press)
+        XCTAssertEqual(sheet.cancelled, 1, "a press outside didn't dismiss a sheet with DismissOutside")
+    }
+
     // Placing a flyout (the desktop hosts' cases): below its anchor and
     // centered, flipped above where there's no room below, lined up with
     // its start, slid and shrunk into the work area.

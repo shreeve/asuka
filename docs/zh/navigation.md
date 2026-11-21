@@ -433,6 +433,34 @@ component Notes {
 - `grabber: true` 在面板顶部显示拖动把手（iOS、Android，以及 Web 的底部面板）。
 - 它的内容在面板打开时构建、关闭时销毁，所以在里面创建的状态每次都是全新的。
 
+### 可移动的面板
+
+`movable: true` 让桌面端的面板变成用户可以移动的对话框，就像桌面上的模态对话框那样，而不是贴在窗口上的 sheet：适合用户想放在下面内容旁边对照着看的详情和表单。它和普通面板一样是模态的：关闭之前，它后面的内容不接受任何输入；Escape 会关闭它，点击它外面则不会，除非写上 `dismissOutside: true`。它没有标题栏：内容就是它的全部，它自己的标题行就是顶端（要给它一个“关闭”按钮）；用户拖动它的背景来移动它，也就是控件、可点击的视图和可选中的文字以外的任何地方。它打开时居中显示在它的窗口上方，大小由 `detents` 决定；`.fit` 的面板和内容一样大，并像任何 `.fit` 面板那样随内容变化。`resizable: true` 让用户还能调整它的大小，适合值得放大来看的内容，比如一份很长的报告：没有它，可移动的面板不能调整大小，就像桌面上的对话框通常不能一样（`Window` 则默认可以调整大小，除非写上 `resizable: false`）。可调整大小的 `.fit` 面板打开时和内容一样大，这也是用户能把它缩到的最小尺寸；此后它保持用户给它的大小，内容填满它。`dismissOutside: true` 让点击它外面像 Escape 一样关闭它，适合用户看一眼就离开的对话框，比如从列表打开的详情：没有它，点击外面什么也不做（Mac 会发出提示音），就像桌面上的模态对话框那样。
+
+```asuka
+component Report {
+  state showing = false
+  prop report = ""
+
+  Sheet {
+    bind open: showing
+    detents: [.fit]
+    movable: true
+    resizable: true
+    Scroll { Text(report) { selectable: true } }
+  }
+}
+```
+
+| | 可移动的面板 |
+|---|---|
+| macOS | 一个没有标题栏的独立窗口（保留窗口的阴影和圆角；有 `resizable` 时可以拖动边缘调整大小），居中显示在它所在窗口的前面，在打开的位置淡入；在此期间，它所在的窗口不接受点击、滚动和悬停（有 `dismissOutside` 时，点击那里会关闭它），⌘W 会关闭它 |
+| Windows | 盖在当前窗口上的模态窗口，普通面板本来就是这样 |
+| Web | 宽窗口上一张盖在遮罩上的卡片，在打开的位置淡入；有 `resizable` 时拖动右下角来调整大小；有 `dismissOutside` 时点击遮罩会关闭它 |
+| iOS、Android、Linux | 和不设置时一样的面板：手机上的面板不能移动，libadwaita 的对话框也不能 |
+
+`fullScreen` 的面板会忽略它。
+
 ### 全屏弹出面板
 
 `fullScreen: true` 让面板盖住整个屏幕，适合那些需要用户专心完成或主动放弃的任务：写一封邮件、登录、编辑一张照片（相当于 SwiftUI 的 `fullScreenCover`，以及 Material 的全屏对话框）。`detents` 和 `grabber` 对它不起作用，也没有面板外部可以点击，不能滑走：只有 `open` 变成 false 时它才会关闭，所以要给它放上自己的“取消”和“完成”按钮。Android 的返回，以及桌面端或浏览器里的 Escape，会像关闭普通面板一样关闭它，除非其中的 `onBack` 拦下了（比如要先确认是否丢弃草稿）。

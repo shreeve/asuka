@@ -1,0 +1,22 @@
+// List rows shows a bare list (no separators of its own) of rows 31.5
+// points high, each a blue band over a black line a point high, so every
+// other row starts half a point into a point (e2e/list_rows_test.go).
+
+component ListRows {
+  List {
+    appearance: .bare
+    for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] key i {
+      Column {
+        View { height: 30.5; background: #0000ff }
+        View { height: 1; background: #000000 }
+      }
+    }
+  }
+}
+
+app { ListRows() }
+
+test "the rows show" {
+  let app = mount(ListRows())
+  app.expect("ListRows")
+}

@@ -358,7 +358,7 @@ textarea.asuka-field { overflow-y: auto; display: block; }
 .asuka-list[data-appearance="grouped"] { background: var(--asuka-grouped-background); }
 .asuka-list[data-appearance="bare"] { background: transparent; }
 .asuka-list-spacer { position: absolute; left: 0; top: 0; width: 1px; pointer-events: none; }
-.asuka-row { position: absolute; left: 0; top: 0; will-change: transform; }
+.asuka-row { position: absolute; left: 0; top: 0; }
 .asuka-cell { position: absolute; left: 0; top: 0; }
 .asuka-row.asuka-sep::after { content: ""; position: absolute; left: 16px; right: 0; bottom: 0; height: 1px; transform: scaleY(0.5); transform-origin: bottom; background: var(--asuka-separator); pointer-events: none; }
 [dir="rtl"] .asuka-row.asuka-sep::after { left: 0; right: 16px; }

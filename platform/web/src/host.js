@@ -752,24 +752,30 @@ export class Host {
   measureNow(n, el, c, opts) {
     const s = el.style;
     const saved = [s.width, s.height, s.maxWidth, s.left, s.top];
+    // The core's constraints and the size it's told are the content's:
+    // the padding and border it sent (ContentInset), which the element
+    // draws inside its border box, are the core's to add.
+    const v = n.inset || [0, 0, 0, 0];
+    const iw = v[1] + v[3], ih = v[0] + v[2];
+    const availW = c.availW + iw;
     s.maxWidth = "none";
     s.height = "auto";
-    if (c.width === c.width) s.width = c.width + "px";
+    if (c.width === c.width) s.width = c.width + iw + "px";
     else if (c.availW === Infinity) s.width = "max-content";
     else if (c.availW === -Infinity) s.width = "min-content";
     else {
       s.width = "max-content";
-      if (el.getBoundingClientRect().width > c.availW) s.width = Math.max(c.availW, 0) + "px";
+      if (el.getBoundingClientRect().width > availW) s.width = Math.max(availW, iw) + "px";
     }
     let r = el.getBoundingClientRect();
     let w = r.width, h = r.height;
-    if (opts.tight && c.width !== c.width && c.availW === c.availW && Math.abs(c.availW) !== Infinity && w >= c.availW - 0.5) {
+    if (opts.tight && c.width !== c.width && c.availW === c.availW && Math.abs(c.availW) !== Infinity && w >= availW - 0.5) {
       // Wrapped: as wide as its widest line, as UIKit and Android measure.
       const tw = text.linesWidth(el);
-      if (tw > 0) w = Math.min(w, tw + text.horizontalInset(n));
+      if (tw > 0) w = Math.min(w, tw + iw);
     }
     s.width = saved[0]; s.height = saved[1]; s.maxWidth = saved[2];
-    return [w, h];
+    return [Math.max(w - iw, 0), Math.max(h - ih, 0)];
   }
 
   // --- Commands to the root ---

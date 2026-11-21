@@ -159,11 +159,7 @@ const button = {
   label(h, n, v) { if (!n.title && v) n.el.title = v; },
   inset(h, n) { padInset(n); },
   measure(h, n, c) {
-    let [w, hh] = h.measureElement(n, n.el, { width: NaN, height: NaN, availW: Infinity, availH: Infinity });
-    // Its padding, when the style sets one, is the core's to add: its
-    // title alone.
-    const v = padded(n);
-    if (v) { w = Math.max(w - v[1] - v[3], 0); hh = Math.max(hh - v[0] - v[2], 0); }
+    const [w, hh] = h.measureElement(n, n.el, { width: NaN, height: NaN, availW: Infinity, availH: Infinity });
     return [fitWidth(c, w, w), hh];
   },
 };

@@ -35,6 +35,7 @@ import AsukaOps
             return t
         case .button:
             let b = NSButton(frame: .zero)
+            b.cell = AsukaButtonCell(textCell: "")
             b.bezelStyle = .rounded
             b.setButtonType(.momentaryPushIn)
             b.title = ""
@@ -421,7 +422,9 @@ import AsukaOps
     }
 
     /// Sets a button's title, colored for a plain or tinted button (the
-    /// bezel can't take a color for the text).
+    /// bezel can't take a color for the text), and white on a disabled
+    /// filled one, whose bezel AppKit only lightens: its gray disabled text
+    /// would all but vanish on it.
     func buttonTitle(_ n: AsukaNode) {
         guard let b = n.view as? NSButton else { return }
         glassShape(n)
@@ -429,10 +432,16 @@ import AsukaOps
         switch macVariant(n) {
         case .plain: color = asukaColor(n.color) ?? accentNSColor
         case .tinted: color = accentNSColor
+        case .filled: if !b.isEnabled && n.color == 0 { color = .alternateSelectedControlTextColor }
         default: break
         }
+        (b.cell as? AsukaButtonCell)?.titleAsGiven = macVariant(n) == .filled && !b.isEnabled
         if color == nil && n.color != 0 { color = asukaColor(n.color) }
         guard let c = color else {
+            // A title colored before (a filled button that was disabled)
+            // takes AppKit's color again: setting the title alone leaves
+            // the color it had.
+            if b.attributedTitle.length > 0 { b.attributedTitle = NSAttributedString() }
             b.title = n.title
             return
         }
@@ -653,5 +662,25 @@ final class AsukaColorWell: NSColorWell {
     override func removeFromSuperview() {
         if isActive { deactivate() }
         super.removeFromSuperview()
+    }
+}
+
+/// A button's cell. AppKit draws a disabled button's title in its dimmed
+/// color whatever its attributed title says; a disabled filled button's
+/// (titleAsGiven) is drawn as its attributed title says while its window
+/// is key, white on the accent bezel AppKit only lightens. In a window
+/// that isn't key the bezel is gray, and AppKit's title is drawn.
+final class AsukaButtonCell: NSButtonCell {
+    var titleAsGiven = false
+
+    override func drawTitle(_ title: NSAttributedString, withFrame frame: NSRect, in controlView: NSView) -> NSRect {
+        guard titleAsGiven, !isEnabled, controlView.window?.isKeyWindow == true else {
+            return super.drawTitle(title, withFrame: frame, in: controlView)
+        }
+        let t = attributedTitle
+        let s = t.size()
+        let r = NSRect(x: frame.midX - s.width / 2, y: frame.midY - s.height / 2, width: s.width, height: s.height)
+        t.draw(in: r)
+        return r
     }
 }

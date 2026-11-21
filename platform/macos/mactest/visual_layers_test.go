@@ -152,6 +152,52 @@ func TestVisualGlassButtons(t *testing.T) {
 
 // A Picker is a pop-up button: its prompt while none is chosen (a hidden
 // item, not in its menu), then the chosen item; the user's choice writes
+
+// A disabled filled button keeps its title white: AppKit only lightens its
+// accent bezel, and its gray disabled text would all but vanish on it.
+// Enabled, the title is AppKit's again; a title color of the app's own
+// stays its.
+func TestVisualFilledDisabled(t *testing.T) {
+	a := Run(t, `
+		component Buttons {
+		  state off = true
+		  Column {
+		    padding: 20; gap: 8; align: .start
+		    Button("Sign On") { variant: .filled; disabled: off }
+		    Button("Red") { variant: .filled; disabled: true; color: .red }
+		    Button("Toggle") { on press { off = !off } }
+		  }
+		}
+		app { Buttons() }
+	`)
+	tr := a.UntilText("Toggle")
+	sign, red := tr.Find("Button", "Sign On"), tr.Find("Button", "Red")
+	if sign == nil || red == nil {
+		t.Fatalf("buttons:\n%s", tr.Raw())
+	}
+	// Disabled, its cell draws its title white (titleAsGiven), as AppKit
+	// would draw it gray.
+	white := func(b *Node) bool { return b.Get("titleAsGiven") == true && b.Str("titleColor") == "#ffffffff" }
+	if sign.Get("enabled") != false || !white(sign) {
+		t.Errorf("disabled: enabled %v, title %q drawn as given %v", sign.Get("enabled"), sign.Str("titleColor"), sign.Get("titleAsGiven"))
+	}
+	if c := red.Str("titleColor"); c == "#ffffffff" || c == "" {
+		t.Errorf("the app's own title color became %q", c)
+	}
+	a.Do("tap Toggle")
+	tr = a.Until(func(tr *Tree) bool { b := tr.Find("Button", "Sign On"); return b != nil && b.Get("enabled") == true })
+	if tr.Find("Button", "Sign On").Get("titleAsGiven") != nil {
+		t.Error("enabled, its cell still draws its title")
+	}
+	a.Do("tap Toggle")
+	a.Until(func(tr *Tree) bool {
+		b := tr.Find("Button", "Sign On")
+		return b != nil && b.Get("enabled") == false && white(b)
+	})
+}
+
+// A Picker is a pop-up button: its prompt while none is chosen (a hidden
+// item, not in its menu), then the chosen item; the user's choice writes
 // the state, and code's selects the item.
 func TestVisualPicker(t *testing.T) {
 	a := Run(t, `

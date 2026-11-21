@@ -477,6 +477,10 @@ import AsukaOps
                 d["bordered"] = b.isBordered
                 d["bezelStyle"] = b.bezelStyle.rawValue
                 if b.image != nil { d["hasImage"] = true }
+                if b.attributedTitle.length > 0, let c = b.attributedTitle.attribute(.foregroundColor, at: 0, effectiveRange: nil) as? NSColor {
+                    d["titleColor"] = colorHex(c)
+                }
+                if (b.cell as? AsukaButtonCell)?.titleAsGiven == true { d["titleAsGiven"] = true }
             }
             if let s = v as? NSSwitch { d["state"] = s.state.rawValue }
             if let s = v as? NSSlider { d["doubleValue"] = s.doubleValue; d["min"] = s.minValue; d["max"] = s.maxValue }

@@ -221,6 +221,7 @@ func asukaStrings(_ b: [UInt8]) -> [String] {
             applyLineLimit(n)
         case AsukaProp.disabled:
             if let c = view as? NSControl { c.isEnabled = !v.bool }
+            if view is NSButton && n.kind == .button { buttonTitle(n) } // a filled button's title stays white
             if v.bool || n.focus != nil { focusProps(n).disabled = v.bool } // it takes no focus (Focus.swift)
             if n.textView != nil { n.textView?.isEditable = !v.bool }
             if n.web != nil || n.kind == .view { view.alphaValue = v.bool ? 0.5 : n.opacity }
@@ -564,7 +565,7 @@ func asukaStrings(_ b: [UInt8]) -> [String] {
         case .text, .textField:
             if let tv = n.textView { tv.textColor = c ?? .labelColor } else { (v as? NSTextField)?.textColor = c ?? .labelColor }
         case .button:
-            if c != nil && n.variant == AsukaButtonVariant.plain.rawValue { buttonTitle(n) }
+            if (c != nil && n.variant == AsukaButtonVariant.plain.rawValue) || macVariant(n) == .filled { buttonTitle(n) }
             (v as? NSButton)?.contentTintColor = c
         case .richText:
             richInvalidate(n)

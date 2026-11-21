@@ -1,0 +1,9 @@
+name = "Web colors"
+id = "dev.asuka.webcolors"
+
+[web.colors]
+label = "#16181d"
+labelDark = "#e8e9eb"
+tertiaryLabel = "#a2a5aa"
+separator = "#dfe1e5"
+separatorDark = "#3a3d42"

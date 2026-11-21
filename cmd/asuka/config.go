@@ -320,6 +320,8 @@ type appConfig struct {
 		// so that its files are found from any route's path, and under
 		// which a Router's hrefs are the page's addresses.
 		Base string `json:"base"`
+		// Colors is the web host's palette, light and dark.
+		Colors webColors `json:"colors"`
 	} `json:"web"`
 	Android struct {
 		// DynamicColor takes the colors from the user's wallpaper where
@@ -394,6 +396,13 @@ func loadConfig(dir string) (*appConfig, error) {
 	if c.Accent != "" {
 		if !hexColor.MatchString(c.Accent) {
 			return nil, fmt.Errorf("asuka.toml: accent %q (want #rrggbb or #rrggbbaa)", c.Accent)
+		}
+	}
+	for _, r := range c.Web.Colors.roles() {
+		for _, v := range [][2]string{{r.key, r.light}, {r.key + "Dark", r.dark}} {
+			if v[1] != "" && !hexColor.MatchString(v[1]) {
+				return nil, fmt.Errorf("asuka.toml: web.colors.%s %q (want #rrggbb or #rrggbbaa)", v[0], v[1])
+			}
 		}
 	}
 	if c.Scheme != "" && !scheme.MatchString(c.Scheme) {
@@ -796,3 +805,88 @@ func (c *appConfig) allows(o string) bool {
 	}
 	return false
 }
+
+// webColors is asuka.toml's [web.colors]: the semantic colors the web
+// host draws with (its stylesheet's --asuka-* variables), each "#rrggbb"
+// or "#rrggbbaa", and each one's in dark mode (Dark; default: the same).
+// A color left out keeps Asuka's. The other platforms keep the system's.
+type webColors struct {
+	Label                          string `json:"label"`
+	LabelDark                      string `json:"labelDark"`
+	SecondaryLabel                 string `json:"secondaryLabel"`
+	SecondaryLabelDark             string `json:"secondaryLabelDark"`
+	TertiaryLabel                  string `json:"tertiaryLabel"`
+	TertiaryLabelDark              string `json:"tertiaryLabelDark"`
+	Background                     string `json:"background"`
+	BackgroundDark                 string `json:"backgroundDark"`
+	SecondaryBackground            string `json:"secondaryBackground"`
+	SecondaryBackgroundDark        string `json:"secondaryBackgroundDark"`
+	GroupedBackground              string `json:"groupedBackground"`
+	GroupedBackgroundDark          string `json:"groupedBackgroundDark"`
+	SecondaryGroupedBackground     string `json:"secondaryGroupedBackground"`
+	SecondaryGroupedBackgroundDark string `json:"secondaryGroupedBackgroundDark"`
+	Separator                      string `json:"separator"`
+	SeparatorDark                  string `json:"separatorDark"`
+	// Card is raised surfaces': alerts, popovers and menus, a Window's
+	// panel, a segmented control's chosen segment.
+	Card     string `json:"card"`
+	CardDark string `json:"cardDark"`
+	// Bar is the header, tab and tool bars' background, and a
+	// snackbar's.
+	Bar     string `json:"bar"`
+	BarDark string `json:"barDark"`
+}
+
+// webColor is one of webColors' roles: its key, its stylesheet variable
+// and its light and dark colors as written.
+type webColor struct {
+	key, css, light, dark string
+}
+
+// roles are c's roles, in the stylesheet's order.
+func (c *webColors) roles() []webColor {
+	return []webColor{
+		{"label", "--asuka-label", c.Label, c.LabelDark},
+		{"secondaryLabel", "--asuka-secondary-label", c.SecondaryLabel, c.SecondaryLabelDark},
+		{"tertiaryLabel", "--asuka-tertiary-label", c.TertiaryLabel, c.TertiaryLabelDark},
+		{"background", "--asuka-background", c.Background, c.BackgroundDark},
+		{"secondaryBackground", "--asuka-secondary-background", c.SecondaryBackground, c.SecondaryBackgroundDark},
+		{"groupedBackground", "--asuka-grouped-background", c.GroupedBackground, c.GroupedBackgroundDark},
+		{"secondaryGroupedBackground", "--asuka-secondary-grouped-background", c.SecondaryGroupedBackground, c.SecondaryGroupedBackgroundDark},
+		{"separator", "--asuka-separator", c.Separator, c.SeparatorDark},
+		{"card", "--asuka-card", c.Card, c.CardDark},
+		{"bar", "--asuka-bar", c.Bar, c.BarDark},
+	}
+}
+
+// css is the page's style sheet for c, after the host's: the colors set,
+// in light mode and in dark (.asuka-dark: the browser's preference or the
+// app's ColorScheme); "" when none is set.
+func (c *webColors) css() string {
+	var light, dark strings.Builder
+	for _, r := range c.roles() {
+		if r.light == "" && r.dark == "" {
+			continue
+		}
+		d := r.dark
+		if d == "" {
+			d = r.light
+		}
+		if r.light != "" {
+			fmt.Fprintf(&light, " %s: %s;", r.css, cssHex(r.light))
+		}
+		fmt.Fprintf(&dark, " %s: %s;", r.css, cssHex(d))
+	}
+	if dark.Len() == 0 {
+		return ""
+	}
+	s := ""
+	if light.Len() > 0 {
+		s = ".asuka {" + light.String() + " }\n"
+	}
+	return s + ".asuka.asuka-dark {" + dark.String() + " }\n"
+}
+
+// cssHex is a color as asuka.toml takes it ("#rrggbb", "#rrggbbaa", the #
+// optional) as CSS writes it.
+func cssHex(s string) string { return "#" + strings.TrimPrefix(s, "#") }

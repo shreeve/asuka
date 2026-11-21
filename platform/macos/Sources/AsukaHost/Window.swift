@@ -230,8 +230,9 @@ struct AsukaWindowConfig: Equatable {
 
     /// Follows what the environment reports: dark mode, Reduce Motion, the
     /// locale and time zone (the window's size and scale come to its
-    /// delegate).
+    /// delegate), and the app's activation (Interaction.swift's appActive).
     func observe() {
+        visual.observeApp()
         appearanceObservation = NSApp.observe(\.effectiveAppearance, options: []) { _, _ in
             DispatchQueue.main.async { MainActor.assumeIsolated { AsukaRuntime.shared.appearanceChanged() } }
         }

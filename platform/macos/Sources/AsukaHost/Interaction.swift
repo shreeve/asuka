@@ -10,7 +10,9 @@
 // clicks itself and never passes them on.
 //
 // Hover is an NSTrackingArea per view, checked again as views appear, move
-// or show under a still pointer. Gestures are Gestures.swift's, drops and
+// or show under a still pointer. Its areas work in the active app alone, so
+// leaving the app clears every hover and coming back checks them again
+// (appActive). Gestures are Gestures.swift's, drops and
 // drags DragDrop.swift's.
 import AppKit
 #if canImport(AsukaOps)
@@ -253,20 +255,35 @@ let asukaDragDistance: CGFloat = 3
     func checkHover(_ n: AsukaNode) {
         guard let x = n.interaction, !x.hovered, x.hoverArea != nil else { return }
         visual.hoverCheck.append(n)
-        if !visual.hoverQueued {
-            visual.hoverQueued = true
-            afterCore { self.runHoverCheck() }
-        }
+        queueHoverCheck()
+    }
+
+    func queueHoverCheck() {
+        guard !visual.hoverQueued, visual.hoverHeld == 0, !visual.hoverCheck.isEmpty else { return }
+        visual.hoverQueued = true
+        afterCore { self.runHoverCheck() }
+    }
+
+    /// Holds the hover checks until the views are placed (hoverHeld), then
+    /// runs them.
+    func holdHover() { visual.hoverHeld += 1 }
+
+    func releaseHover() {
+        visual.hoverHeld -= 1
+        queueHoverCheck()
     }
 
     func runHoverCheck() {
         visual.hoverQueued = false
+        guard visual.hoverHeld == 0 else { return } // releaseHover runs them
         let q = visual.hoverCheck
         visual.hoverCheck = []
         for n in q {
             guard let x = n.interaction, !x.hovered, live(n), n.listening(.hover), let v = n.view, !v.isHiddenOrHasHiddenAncestor,
                   let w = v.window, let p = hoverProbe(w) else { continue }
-            if v.visibleRect.contains(v.convert(p, from: nil)) { setHover(n, true) }
+            // A List's row's visibleRect is the list's whole shown area, not
+            // clipped to the row: the bounds clip it.
+            if v.visibleRect.intersection(v.bounds).contains(v.convert(p, from: nil)) { setHover(n, true) }
         }
     }
 

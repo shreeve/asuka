@@ -388,7 +388,12 @@ struct AsukaListRow {
             return
         }
         tiling = true
-        defer { tiling = false }
+        // The rows bound are placed below, after their bindings return.
+        rt.holdHover()
+        defer {
+            tiling = false
+            rt.releaseHover()
+        }
         for _ in 0..<4 {
             measureTops()
             let total = tops.last ?? 0

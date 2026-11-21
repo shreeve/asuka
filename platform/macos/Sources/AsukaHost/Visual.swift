@@ -25,6 +25,9 @@ import AsukaOps
     /// Views to check for the pointer once the core has returned.
     var hoverCheck: [AsukaNode] = []
     var hoverQueued = false
+    /// Hover checks wait while a part places the views the core bound into
+    /// it (a List's rows): until then they aren't where they'll show.
+    var hoverHeld = 0
     /// A trackpad's two-finger scroll over a view that takes swipes.
     var wheelSwipe = AsukaWheelSwipe()
     /// The animated shaders' clock.

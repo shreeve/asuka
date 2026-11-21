@@ -130,6 +130,53 @@ func TestVisualHover(t *testing.T) {
 	a.Do("hoverprobe off")
 }
 
+// Hover in a List: of the rows that appear under a still pointer over the
+// first, only the first is hovered. The checks wait until the list has
+// placed the rows it bound, and a row's visibleRect is clipped to it.
+func TestVisualHoverListRows(t *testing.T) {
+	a := Run(t, `
+		component Rows {
+		  state log = ""
+		  state shown = false
+		  Row {
+		    padding: 20; gap: 20; align: .start
+		    View {
+		      width: 300; height: 200
+		      if shown {
+		        List {
+		          appearance: .bare
+		          grow: 1
+		          for i in [0, 1, 2, 3] key i {
+		            View { height: 30; on hoverChange(h) { log = log + "row{i} {h};" } }
+		          }
+		        }
+		      }
+		    }
+		    Column {
+		      gap: 10
+		      Button("Show") { on press { shown = true } }
+		      Text("log:{log}")
+		    }
+		  }
+		}
+		app { Rows() }
+	`)
+	a.UntilText("log:")
+	l := &vlogger{a: a}
+	a.Do("hoverprobe 100 35", "tap Show")
+	l.until(t, func(s string) bool { return strings.Contains(s, "row0 true;") })
+	var hovered int
+	for _, n := range a.Tree().Kind("View") {
+		if len(n.Frame) == 4 && vnear(n.Frame[2], 300, 0.5) && vnear(n.Frame[3], 30, 0.5) && vbool(vobj(n, "interaction"), "hovered") {
+			hovered++
+		}
+	}
+	if log := vlogOf(a.Tree()); hovered != 1 || log != "row0 true;" {
+		t.Errorf("rows appearing under the pointer over the first: %d hovered, log %q", hovered, log)
+	}
+	a.Do("hoverprobe off")
+}
+
 // Drops: AppKit gives a drag to the innermost registered view, which
 // hands it to the innermost target above it that takes it; DragOver
 // follows it; a text, a file, image data and the app's own drag drop as

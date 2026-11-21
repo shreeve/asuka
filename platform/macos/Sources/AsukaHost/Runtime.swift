@@ -103,7 +103,6 @@ import AsukaOps
         observe()
         AsukaKeyWatcher.shared.watch()
         AsukaShell.shared.restoreState()
-        registerNatives()
         AsukaShell.shared.beforeCore()
         enter { boot() }
         startWindows()

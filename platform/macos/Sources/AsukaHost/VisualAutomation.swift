@@ -110,10 +110,6 @@ final class AsukaTestDraggingInfo: NSObject, NSDraggingInfo {
 @MainActor extension AsukaRuntime {
     /// The automation's own native view kinds: a native component named
     /// MacTestSlider (in any package) is the test's slider.
-    func registerTestNatives() {
-        visual.observeApp()
-    }
-
     func nativeTestFactory(_ type: String) -> ((AsukaNativeContext) -> AsukaNativeView)? {
         guard AsukaAutomation.shared.active, type == "MacTestSlider" || type.hasSuffix("#MacTestSlider") else { return nil }
         return { AsukaTestNative($0) }

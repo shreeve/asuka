@@ -11,13 +11,6 @@ import AsukaOps
 #endif
 
 @MainActor extension AsukaRuntime {
-    /// The host's own native view kinds. The modules' (a map, a camera's
-    /// preview, the sign-in and pay buttons) are registered with their
-    /// modules, in nativeFactories; the automation's test view under it.
-    func registerNatives() {
-        if AsukaAutomation.shared.active { registerTestNatives() }
-    }
-
     /// Registers one of the host's native view kinds for ui.Native.
     func registerNative(_ type: String, _ make: @escaping (AsukaNativeContext) -> AsukaNativeView) {
         nativeFactories[type] = make

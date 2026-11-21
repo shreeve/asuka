@@ -422,8 +422,40 @@ The web build's.
 |---|---|---|---|
 | `vapidPublicKey` | string | none | The app server's VAPID public key (base64url), with which the browser subscribes to Web Push for `platform/push`. |
 | `base` | string | `"/"` | The path the site is served at (`"/app/"` for `https://example.com/app/`): the page's `<base href>`, under which a router's hrefs are its addresses. `asuka build --base` overrides it. See [Addresses and history](web.md#addresses-and-history). |
+| `colors` | table | Asuka's | The page's palette, light and dark: the table below. See [The palette](web.md#the-palette). |
 
 See [Web Push](web.md#platformpush-web-push).
+
+`[web.colors]` sets the colors the web host draws with, each `"#rrggbb"`
+or `"#rrggbbaa"`. Each has a second key for dark mode, its name and
+`Dark` (`labelDark`), used while the page shows dark (the browser's
+`prefers-color-scheme`, or `appearance.setColorScheme(.dark)`); without
+it, the color is the same in both. A color left out keeps Asuka's.
+They're the web's only: iOS, Android, the Mac, Windows and Linux keep
+the system's colors.
+
+```toml
+[web.colors]
+label = "#16181d"
+labelDark = "#e8e9eb"
+background = "#ffffff"
+backgroundDark = "#101114"
+separator = "#dfe1e5"
+separatorDark = "#3a3d42"
+```
+
+| Key (and `…Dark`) | What it colors |
+|---|---|
+| `label` | `.label`, and text that names no color: Text, a field's text, a Picker's |
+| `secondaryLabel` | `.secondaryLabel`: an alert's message, a tab bar's unselected tabs, menus' and a sidebar's headings |
+| `tertiaryLabel` | `.tertiaryLabel`: a field's placeholder, disabled bar buttons and menu items, a sheet's grabber |
+| `background` | `.background`: the page, screens, lists, sheets, a bordered button's fill (and the browser's theme color) |
+| `secondaryBackground` | `.secondaryBackground`: a split's sidebar, a window's title bar |
+| `groupedBackground` | `.groupedBackground`: a grouped list's background |
+| `secondaryGroupedBackground` | `.secondaryGroupedBackground`: a grouped list's rows |
+| `separator` | `.separator`: list rows' lines, bars' edges, a bordered button's and a Picker's border, a stepper's divider, menus' separators |
+| `card` | raised surfaces: alerts, popovers and menus, a Window's panel, a segmented control's chosen segment |
+| `bar` | the header, tab and tool bars' background, and a snackbar's |
 
 ## bluetooth
 

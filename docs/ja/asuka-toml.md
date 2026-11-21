@@ -373,8 +373,37 @@ Web のビルドの設定です。
 |---|---|---|---|
 | `vapidPublicKey` | 文字列 | なし | アプリのサーバーの VAPID 公開鍵（base64url）です。ブラウザーは、`platform/push` の Web Push を購読するときにこれを使います。 |
 | `base` | 文字列 | `"/"` | サイトを配信するパスです（`https://example.com/app/` なら `"/app/"`）。ページの `<base href>` になり、ルーターの href はその下のアドレスになります。`asuka build --base` で上書きできます。[アドレスと履歴](web.md#アドレスと履歴)を参照してください。 |
+| `colors` | テーブル | Asuka の色 | ページのパレットで、ライトとダークがあります。下の表を見てください。[パレット](web.md#パレット)も参照してください。 |
 
 [Web Push](web.md#platformpushweb-push) を参照してください。
+
+`[web.colors]` は、Web のホストが描画に使う色を設定します。どれも `"#rrggbb"`
+または `"#rrggbbaa"` で書きます。それぞれの色には、名前に `Dark` を付けた
+ダークモード用のキー（`labelDark` など）もあり、ページがダークで表示されているあいだ（ブラウザーの
+`prefers-color-scheme`、または `appearance.setColorScheme(.dark)`）はそちらが使われます。書かなければ、どちらのモードでも同じ色です。書かなかった色は Asuka の色のままです。これは Web だけの設定で、iOS、Android、Mac、Windows、Linux はシステムの色を使い続けます。
+
+```toml
+[web.colors]
+label = "#16181d"
+labelDark = "#e8e9eb"
+background = "#ffffff"
+backgroundDark = "#101114"
+separator = "#dfe1e5"
+separatorDark = "#3a3d42"
+```
+
+| キー（と `…Dark`） | 使われる場所 |
+|---|---|
+| `label` | `.label` と、色を指定していない文字：Text、フィールドの文字、Picker の文字 |
+| `secondaryLabel` | `.secondaryLabel`：アラートのメッセージ、タブバーの選ばれていないタブ、メニューとサイドバーの見出し |
+| `tertiaryLabel` | `.tertiaryLabel`：フィールドのプレースホルダー、無効なバーのボタンとメニュー項目、シートのグラバー |
+| `background` | `.background`：ページ、画面、リスト、シート、枠付きボタンの塗り（とブラウザーのテーマカラー） |
+| `secondaryBackground` | `.secondaryBackground`：Split のサイドバー、ウィンドウのタイトルバー |
+| `groupedBackground` | `.groupedBackground`：グループ化したリストの背景 |
+| `secondaryGroupedBackground` | `.secondaryGroupedBackground`：グループ化したリストの行 |
+| `separator` | `.separator`：リストの行の区切り線、バーの境界、枠付きボタンと Picker の枠、Stepper の仕切り、メニューの区切り |
+| `card` | 浮き上がった面：アラート、ポップオーバーとメニュー、Window のパネル、セグメンテッドコントロールの選ばれたセグメント |
+| `bar` | ヘッダーバー、タブバー、ツールバーの背景と、スナックバーの背景 |
 
 ## bluetooth
 

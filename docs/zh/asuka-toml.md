@@ -371,8 +371,37 @@ Web 构建的配置。
 |---|---|---|---|
 | `vapidPublicKey` | 字符串 | 无 | 应用服务器的 VAPID 公钥（base64url），浏览器用它为 `platform/push` 订阅 Web Push。 |
 | `base` | 字符串 | `"/"` | 网站所在的路径（`https://example.com/app/` 就写 `"/app/"`）：页面的 `<base href>`，路由器的 href 就是它下面的页面地址。`asuka build --base` 会覆盖它。见[地址与历史记录](web.md#地址与历史记录)。 |
+| `colors` | 表 | Asuka 自带 | 页面的调色板，分浅色和深色：见下表。见[调色板](web.md#调色板)。 |
 
 见 [Web Push](web.md#platformpushweb-push)。
+
+`[web.colors]` 设置 Web 宿主绘制时使用的颜色，每个都写成 `"#rrggbb"`
+或 `"#rrggbbaa"`。每个颜色都另有一个深色模式用的键，即在名字后加
+`Dark`（如 `labelDark`），页面以深色显示时（浏览器的
+`prefers-color-scheme`，或 `appearance.setColorScheme(.dark)`）使用它；不写的话，两种模式用同一个颜色。没写的颜色保持 Asuka 自带的值。这些设置只对 Web 生效：iOS、Android、Mac、Windows 和 Linux 仍然使用系统的颜色。
+
+```toml
+[web.colors]
+label = "#16181d"
+labelDark = "#e8e9eb"
+background = "#ffffff"
+backgroundDark = "#101114"
+separator = "#dfe1e5"
+separatorDark = "#3a3d42"
+```
+
+| 键（以及 `…Dark`） | 用在哪里 |
+|---|---|
+| `label` | `.label`，以及没有指定颜色的文字：Text、输入框的文字、Picker 的文字 |
+| `secondaryLabel` | `.secondaryLabel`：对话框的说明文字、标签栏中未选中的标签、菜单和侧边栏的分组标题 |
+| `tertiaryLabel` | `.tertiaryLabel`：输入框的占位文字、禁用的栏按钮和菜单项、sheet 的拖动条 |
+| `background` | `.background`：页面、屏幕、列表、sheet、带边框按钮的填充色（以及浏览器的主题色） |
+| `secondaryBackground` | `.secondaryBackground`：Split 的侧边栏、窗口的标题栏 |
+| `groupedBackground` | `.groupedBackground`：分组列表的背景 |
+| `secondaryGroupedBackground` | `.secondaryGroupedBackground`：分组列表的行 |
+| `separator` | `.separator`：列表行之间的线、各种栏的边缘、带边框按钮和 Picker 的边框、Stepper 的分隔线、菜单的分隔线 |
+| `card` | 浮起的表面：对话框、弹出框和菜单、Window 的面板、分段控件中选中的那一段 |
+| `bar` | 顶部栏、标签栏和工具栏的背景，以及 snackbar 的背景 |
 
 ## bluetooth
 

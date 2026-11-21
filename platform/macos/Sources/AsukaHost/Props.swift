@@ -48,9 +48,16 @@ import AsukaOps
 
 /// The app's accent, or the system's.
 @MainActor var accentNSColor: NSColor {
-    let a = AsukaRuntime.shared.accent
-    if a >> 32 == 2, let c = asukaColor(a) { return c }
-    return .controlAccentColor
+    asukaAccentColor(light: AsukaRuntime.shared.accent, dark: AsukaRuntime.shared.accentDark)
+}
+
+/// The accent for both appearances, from ops colors: light (0: the
+/// system's), and dark in a dark appearance (0: light in both).
+@MainActor func asukaAccentColor(light: UInt64, dark: UInt64) -> NSColor {
+    var l = NSColor.controlAccentColor
+    if light >> 32 == 2, let c = asukaColor(light) { l = c }
+    guard dark >> 32 == 2, let d = asukaColor(dark) else { return l }
+    return NSColor(name: nil) { [l] a in a.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? d : l }
 }
 
 /// An NSColor as an RGBA ops color.

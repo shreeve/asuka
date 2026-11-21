@@ -31,6 +31,14 @@ func asukaColor(_ v: UInt64) -> UIColor? {
 /// The app's accent (the Accent command's), for colors made from it.
 var asukaAccent: UIColor?
 
+/// The app's accent for both appearances: light, and dark in dark mode
+/// (dark nil: light in both; light nil: UIKit's default tint in light).
+func asukaAccentColor(light: UIColor?, dark: UIColor?) -> UIColor? {
+    guard let dark else { return light }
+    let light = light ?? .systemBlue
+    return UIColor { $0.userInterfaceStyle == .dark ? dark : light }
+}
+
 func semanticColor(_ c: AsukaSemanticColor?) -> UIColor? {
     switch c {
     case .label: return .label

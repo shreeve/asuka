@@ -651,6 +651,43 @@ struct Reader {
         rt.destroy(r)
         XCTAssertNil(rt.devError)
     }
+
+    // MARK: Accent
+
+    /// c's sRGB components as 0-255, in the appearance given.
+    private func rgba(_ c: UIColor?, _ style: UIUserInterfaceStyle) -> [Int] {
+        guard let c else { return [] }
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        c.resolvedColor(with: UITraitCollection(userInterfaceStyle: style)).getRed(&r, green: &g, blue: &b, alpha: &a)
+        return [r, g, b, a].map { Int(($0 * 255).rounded()) }
+    }
+
+    /// The Accent command's dark color (asuka.toml's accentDark) is the
+    /// accent in a dark appearance: the tint, and the colors made from
+    /// .accent; without one, the accent is the same in both.
+    func testDarkAccent() {
+        let r = root()
+        defer { setAccent(r, 0, 0) }
+        let blue: [Int] = [0x25, 0x63, 0xeb, 255], sky: [Int] = [0x93, 0xc5, 0xfd, 255]
+        setAccent(r, 2 << 32 | 0x2563ebff, 2 << 32 | 0x93c5fdff)
+        let faded = asukaColor(1 << 32 | 0x7f << 24 | UInt64(AsukaSemanticColor.accent.rawValue))
+        XCTAssertEqual(rgba(rt.accent, .light), blue)
+        XCTAssertEqual(rgba(rt.accent, .dark), sky)
+        XCTAssertEqual(rgba(faded, .light), [0x25, 0x63, 0xeb, 128])
+        XCTAssertEqual(rgba(faded, .dark), [0x93, 0xc5, 0xfd, 128])
+        setAccent(r, 2 << 32 | 0x2563ebff, 0)
+        XCTAssertEqual(rgba(rt.accent, .light), blue)
+        XCTAssertEqual(rgba(rt.accent, .dark), blue)
+    }
+
+    /// ops.Accent's arguments: u64 Color, u8 flags, u64 Dark.
+    private func setAccent(_ root: UInt32, _ color: UInt64, _ dark: UInt64) {
+        var w = AsukaWriter()
+        w.u64(color)
+        w.u8(0)
+        w.u64(dark)
+        command(root, .accent, w.bytes)
+    }
 }
 
 /// The Keys prop as ops.AppendKeys writes it.

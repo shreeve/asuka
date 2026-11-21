@@ -1,0 +1,41 @@
+// Backdrop Press opens a sheet from a pressable view (e2e's
+// TestBackdropPress*), counting the presses inside it and its dismissals.
+
+component BackdropPress {
+  state open = false
+  state inside = 0
+  state dismissed = 0
+
+  Column {
+    grow: 1
+    padding: 24
+    gap: 12
+    View {
+      padding: 16
+      background: .secondaryBackground
+      on press { open = true }
+      Text("Open")
+    }
+    Text("inside {inside}")
+    Text("dismissed {dismissed}")
+    Sheet {
+      open: open
+      on dismiss {
+        dismissed += 1
+        open = false
+      }
+      Column {
+        padding: 24
+        Button("Inside") { on press { inside += 1 } }
+      }
+    }
+  }
+}
+
+app { BackdropPress() }
+
+test "the sheet opens from the view" {
+  let app = mount(BackdropPress())
+  app.tap("Open")
+  app.expect("Inside")
+}

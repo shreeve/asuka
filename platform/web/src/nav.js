@@ -79,6 +79,23 @@ function iconButton(symbol, label, rtl) {
   return b;
 }
 
+/**
+ * onBackdropPress calls f for a press on dialog d's backdrop (d itself,
+ * around its content): a click there whose press began there too. A tap
+ * that opens a dialog as it ends (Press is the pointerup's) is followed in
+ * iOS Safari by its click, hit-tested at the finger once the dialog shows:
+ * on the backdrop, though the press began on what opened it.
+ */
+function onBackdropPress(d, f) {
+  let down = false;
+  d.addEventListener("pointerdown", (e) => { down = e.target === d; });
+  d.addEventListener("click", (e) => {
+    const pressed = down;
+    down = false;
+    if (e.target === d && pressed) f();
+  });
+}
+
 export class Navigation {
   constructor(h) {
     this.h = h;
@@ -529,7 +546,7 @@ export class Navigation {
     n.shown = true;
     this.dialogs.push(n);
     d.addEventListener("cancel", (e) => { e.preventDefault(); this.dismiss(n); });
-    d.addEventListener("click", (e) => { if (e.target === d && !n.fullScreen) this.dismiss(n); });
+    onBackdropPress(d, () => { if (!n.fullScreen) this.dismiss(n); });
     d.showModal();
     this.sizeDialog(n);
     const wide = this.wide() && !n.fullScreen;
@@ -800,7 +817,7 @@ export class Navigation {
       else this.h.emit(n, Event.Dismissed, Events.dismissed);
     };
     d.addEventListener("cancel", (e) => { e.preventDefault(); cancel(); });
-    d.addEventListener("click", (e) => { if (e.target === d && sheet) cancel(); });
+    onBackdropPress(d, () => { if (sheet) cancel(); });
     d.showModal();
     this.placeOnWindow(n);
     // Return in the last field presses the default button: the first

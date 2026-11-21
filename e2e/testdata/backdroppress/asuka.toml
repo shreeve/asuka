@@ -1,0 +1,3 @@
+name = "Backdrop Press"
+id = "dev.asuka.backdroppress"
+orientations = ["portrait"]

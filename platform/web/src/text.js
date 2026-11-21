@@ -100,7 +100,21 @@ export function loadFamily(h, name) {
   faces.set(name, p);
 }
 
-/** linesWidth is the width of an element's widest line of text. */
+/**
+ * boxSize is an element's border box as laid out, [width, height] in CSS
+ * pixels: its used size, which a transform around it (a sheet scaling in
+ * as it opens) leaves as it is, where getBoundingClientRect scales it. An
+ * inline element has no used size: its box as drawn.
+ */
+export function boxSize(el) {
+  const cs = getComputedStyle(el);
+  const w = parseFloat(cs.width), h = parseFloat(cs.height);
+  if (w >= 0 && h >= 0) return [w, h];
+  const r = el.getBoundingClientRect();
+  return [r.width, r.height];
+}
+
+/** linesWidth is the width of an element's widest line of text, as drawn. */
 export function linesWidth(el) {
   const r = document.createRange();
   r.selectNodeContents(el);

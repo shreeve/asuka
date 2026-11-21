@@ -1,0 +1,34 @@
+// Text Transform shows the same text twice (e2e's TestTextTransform*):
+// blue as it is, and red in a view drawn at half its size (a transform,
+// which layout doesn't see), each its text in its own color.
+
+component TextTransform {
+  View {
+    grow: 1
+    justify: .center
+    align: .center
+    gap: 24
+    background: #ffffff
+
+    Text("Measure this") {
+      font: Font(size: 16, weight: .bold)
+      color: #0000ff
+      background: #0000ff
+    }
+    View {
+      transform: Transform(scale: 0.5)
+      Text("Measure this") {
+        font: Font(size: 16, weight: .bold)
+        color: #ff0000
+        background: #ff0000
+      }
+    }
+  }
+}
+
+app { TextTransform() }
+
+test "the text twice under the square" {
+  let app = mount(TextTransform())
+  app.expect("Measure this")
+}

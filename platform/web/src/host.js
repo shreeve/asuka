@@ -765,13 +765,15 @@ export class Host {
     else if (c.availW === -Infinity) s.width = "min-content";
     else {
       s.width = "max-content";
-      if (el.getBoundingClientRect().width > availW) s.width = Math.max(availW, iw) + "px";
+      if (text.boxSize(el)[0] > availW) s.width = Math.max(availW, iw) + "px";
     }
-    let r = el.getBoundingClientRect();
-    let w = r.width, h = r.height;
+    let [w, h] = text.boxSize(el);
     if (opts.tight && c.width !== c.width && c.availW === c.availW && Math.abs(c.availW) !== Infinity && w >= availW - 0.5) {
-      // Wrapped: as wide as its widest line, as UIKit and Android measure.
-      const tw = text.linesWidth(el);
+      // Wrapped: as wide as its widest line, as UIKit and Android measure;
+      // the line's box is as drawn, so it's scaled back by what a
+      // transform around the element scales it by.
+      const drawn = el.getBoundingClientRect().width;
+      const tw = text.linesWidth(el) * (drawn > 0 ? w / drawn : 1);
       if (tw > 0) w = Math.min(w, tw + iw);
     }
     s.width = saved[0]; s.height = saved[1]; s.maxWidth = saved[2];

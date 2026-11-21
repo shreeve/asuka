@@ -308,6 +308,7 @@ typedef struct {
 	bool animating;
 	animation anim;
 	ak_color accent;
+	ak_color accent_dark;  // the accent in dark mode (0: accent's)
 	bool dark;
 	palette theme;
 	ak_id next_cell;

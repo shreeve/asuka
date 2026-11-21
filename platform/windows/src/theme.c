@@ -15,6 +15,9 @@ rgba rgba_over(rgba c, rgba bg) {
 #undef MIX
 }
 
+// wh_accent is the app's accent in light or dark mode (0: the system's).
+ak_color wh_accent(bool dark) { return dark && H.accent_dark ? H.accent_dark : H.accent; }
+
 void wh_palette(palette *p, bool dark, ak_color accent) {
 	// The system accent and its shades: Settings, Personalization, Colors.
 	uint32_t shades[7];

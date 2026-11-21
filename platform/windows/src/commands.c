@@ -5,10 +5,10 @@
 // router's address, the language, quitting; asuka dev's error overlay.
 #include "win.h"
 
-void wh_set_accent(ak_color c) {
-	if (c == H.accent) return;
-	H.accent = c;
-	wh_palette(&H.theme, H.dark, c);
+void wh_set_accent(ak_color c, ak_color dark) {
+	if (c == H.accent && dark == H.accent_dark) return;
+	H.accent = c, H.accent_dark = dark;
+	wh_palette(&H.theme, H.dark, wh_accent(H.dark));
 	RedrawWindow(H.window, NULL, NULL, RDW_INVALIDATE | RDW_ALLCHILDREN);
 	wh_dev_error_restyle();
 }
@@ -190,7 +190,7 @@ void wh_command(node *n, uint16_t cmd, const uint8_t *args, size_t len) {
 		if (len >= 9) wh_scroll_to_offset(n, wh_f32(args), wh_f32(args + 4));
 		break;
 	case AK_CMD_ACCENT:
-		if (len >= 8) wh_set_accent(wh_u64(args));
+		if (len >= 8) wh_set_accent(wh_u64(args), len >= 17 ? wh_u64(args + 9) : 0);  // the dark one after Android's flags
 		break;
 	case AK_CMD_MENU_BAR:
 		wh_set_menu_bar(args, len);

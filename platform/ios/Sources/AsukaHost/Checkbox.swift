@@ -18,7 +18,6 @@ final class AsukaCheckbox: UIButton {
         // it from 44 points around (point(inside:)).
         configuration?.contentInsets = .zero
         configuration?.imagePadding = 0
-        configuration?.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(textStyle: .title2)
         addAction(UIAction { [weak self] _ in
             guard let self else { return }
             self.isOn.toggle()
@@ -31,8 +30,17 @@ final class AsukaCheckbox: UIButton {
         bounds.insetBy(dx: min(0, (bounds.width - 44) / 2), dy: min(0, (bounds.height - 44) / 2)).contains(p)
     }
 
+    override func traitCollectionDidChange(_ previous: UITraitCollection?) {
+        super.traitCollectionDidChange(previous)
+        if previous?.preferredContentSizeCategory != traitCollection.preferredContentSizeCategory { update() }
+    }
+
     private func update() {
-        configuration?.image = UIImage(systemName: isOn ? "checkmark.circle.fill" : "circle")
+        // At title 2's size; its alignment box all of it, as the button
+        // sizes its image by that box: the symbol's own is smaller than
+        // the circle it draws, whose top and bottom would be cut off.
+        let size = UIImage.SymbolConfiguration(font: .preferredFont(forTextStyle: .title2, compatibleWith: traitCollection))
+        configuration?.image = UIImage(systemName: isOn ? "checkmark.circle.fill" : "circle", withConfiguration: size)?.withAlignmentRectInsets(.zero)
         configuration?.baseForegroundColor = isOn ? nil : .tertiaryLabel // the tint when on
         if #available(iOS 17.0, *) { accessibilityTraits = [.button, .toggleButton] }
         accessibilityValue = isOn ? "1" : "0"

@@ -573,6 +573,21 @@ the accent the user picked (macOS's System Settings, Appearance;
 Windows' Settings, Personalization, Colors), on Linux libadwaita's
 blue, and on the web a blue of Asuka's. See [Shipping](shipping.md).
 
+A color that reads well on white can be too dark on a dark background.
+`accentDark` gives the accent for dark mode:
+
+```toml
+accent = "#2563eb"
+accentDark = "#93c5fd"
+```
+
+On iOS, macOS, Windows, Linux and the web, `.accent` and the controls
+take it whenever the app shows dark, whether it follows the system or
+shows itself dark (below), and `accent` again in light. Without it,
+`accent` serves both. Android makes its dark colors from `accent`
+itself, as the seed of the color scheme's dark tones, so it doesn't use
+`accentDark`.
+
 ## Light and dark
 
 The app follows the system's appearance: iOS's and macOS's Dark Mode,

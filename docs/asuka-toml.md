@@ -29,6 +29,7 @@ version = "1.2.0"
 build = 7
 icon = "icon.png"
 accent = "#7c3aed"
+accentDark = "#a78bfa"
 scheme = "notes"
 links = ["notes.example.com"]
 shareTarget = true
@@ -75,6 +76,7 @@ These apply on every platform the key means something on.
 | `build` | integer | `1` | The build's number, which must grow with each upload. `asuka publish` numbers a build one above the store's highest itself, so this is only where it starts. Windows's file version is `version` and `build` together (`1.2.0.7`). |
 | `icon` | path | none: the platform's generic icon | A square PNG, 1024×1024, without transparency for iOS. Each build makes the sizes its platform wants. The App Store needs one. |
 | `accent` | color | the platform's | `"#rrggbb"` or `"#rrggbbaa"`: the tint on iOS, the seed of the Material 3 color scheme on Android, the color of `Accent`, filled buttons and links on the Mac (AppKit's own controls keep the user's), the controls' accent on Windows and libadwaita's on Linux, the page's and the manifest's `theme_color` on the web. |
+| `accentDark` | color | `accent` | The accent in dark mode, in the same form: on iOS, the Mac, Windows, Linux and the web, `.accent` and the controls take it while the app shows dark (the system's appearance, or `appearance.setColorScheme(.dark)`). Android's Material 3 scheme makes its dark colors from `accent`, so it doesn't use it. Without `accent`, light mode has the platform's. |
 | `orientations` | strings | both | `"portrait"`, `"landscape"`: the orientations the app takes on a phone. iPads take all four, as Split View and Stage Manager need, and Android 16 ignores it on tablets and foldables. |
 | `scheme` | string | none | The app's URL scheme: `notes://` URLs open it, and the app's `on openURL(url)` gets them, on iOS, Android, the Mac, Windows and Linux. Letters, digits, `+`, `-` and `.`, a letter first. See [Deep links](navigation.md#deep-links). |
 | `links` | strings | none | Domains, as `example.com`, whose https links open the app: iOS's universal links and Android's App Links. The domain serves the association file. See [Deep links](navigation.md#deep-links). |

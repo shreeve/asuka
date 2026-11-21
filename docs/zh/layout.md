@@ -414,6 +414,15 @@ accent = "#7c3aed"
 
 如果没有设置强调色，就使用平台自己的。在 macOS 和 Windows 上，这是用户自己选的强调色（macOS 的“系统设置 > 外观”；Windows 的“设置 > 个性化 > 颜色”）；在 Linux 上是 libadwaita 的蓝色；在 Web 上是 Asuka 自带的一种蓝色。参见[发布](shipping.md)。
 
+在白色背景上清晰的颜色，放到深色背景上可能会显得太暗。`accentDark` 用来指定深色模式下的强调色：
+
+```toml
+accent = "#2563eb"
+accentDark = "#93c5fd"
+```
+
+在 iOS、macOS、Windows、Linux 和 Web 上，只要应用以深色显示，无论是跟随系统，还是自己强制使用深色（见下文），`.accent` 和控件都会改用它；回到浅色时又用回 `accent`。不设置它时，两种模式都使用 `accent`。Android 会把 `accent` 本身作为配色方案的种子色，由它推导出深色色调，所以不使用 `accentDark`。
+
 ## 浅色与深色
 
 应用会跟随系统的外观：iOS 和 macOS 的深色模式、Android 的深色主题、Windows 的应用模式（“设置 > 个性化 > 颜色”）、GNOME 的深色样式，以及浏览器的 `prefers-color-scheme`。应用也可以无视系统设置，强制以浅色或深色显示，就像应用内置的外观设置那样（对应 SwiftUI 的 `preferredColorScheme`；Android 上 AppCompat 的夜间模式；macOS 上应用的 `NSAppearance`；Linux 上 libadwaita 的 style manager）：见[应用](navigation.md)。语义颜色、平台控件和系统栏都会随之切换，无需重建应用；当前是哪种模式，可以看环境的 `dark`。用 [`std/store`](../stdlib.md) 保存用户的选择。

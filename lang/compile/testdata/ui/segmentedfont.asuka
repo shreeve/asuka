@@ -1,0 +1,18 @@
+// A Segmented takes its font: the host draws its choices in it.
+
+component SegmentedFont {
+  Column {
+    Text("segmented")
+    Segmented(["One", "Two"]) { font: Font(size: 15, weight: .medium) }
+  }
+}
+
+app { SegmentedFont() }
+
+test "a segmented control takes its font" {
+  let app = mount(SegmentedFont())
+  app.expect("segmented")
+  let ops = app.ops()
+  expect(ops.contains("FontSize=15"), ops)
+  expect(ops.contains("FontWeight="), ops)
+}

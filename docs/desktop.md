@@ -707,8 +707,11 @@ work area: it's the display's bounds there.
 `power.status()` follows the battery, Low Power Mode and the thermal
 state. `power.suspends()`, `resumes()`, `locks()` and `unlocks()` are
 streams of the computer sleeping and waking and the screen locking, and
-`power.idleTime()` is how long the user has been away. Phones have lock
-and unlock, but no suspend or idle time; the web, the battery alone.
+`power.idleTime()` is how long the user has been away from the whole
+computer. Phones have lock and unlock, but no suspend or idle time; the
+web, the battery alone. The time since the user's last input in the app
+itself, for an inactivity timeout, is `activity.idle()`
+([platform/activity](device.md#the-users-activity-platformactivity)).
 
 ```asuka
 import platform/power

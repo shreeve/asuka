@@ -1,0 +1,73 @@
+// platform/activity with no platform code (the fake host): the app is
+// idle since it started, and hears no input. A test's fake is the user:
+// an inactivity timeout (a sign-out after so long without input, as
+// CPRS's) follows what it says, on the test's clock.
+
+import platform/activity
+import std/time
+
+component Timeout {
+  prop limit: Duration
+  state signedOut = false
+  state heard = 0
+
+  task {
+    while !signedOut {
+      let left = limit - activity.idle()
+      if left <= 0s {
+        signedOut = true
+      } else {
+        await sleep(left)
+      }
+    }
+  }
+
+  task {
+    for await _ in activity.inputs() { heard += 1 }
+  }
+
+  Column {
+    Text(if signedOut { "Signed out" } else { "Signed in" })
+    Text("heard {heard}")
+  }
+}
+
+app { Timeout { limit: 5min } }
+
+test "no platform here: idle since the app started" {
+  expect(!activity.available())
+  let before = activity.idle()
+  await sleep(90s)
+  expect(activity.idle() == before + 90s)
+  expect(activity.lastInput().sub(time.now()) == -activity.idle())
+}
+
+test "the fake's input puts the timeout off" {
+  let user = activity.fake()
+  expect(activity.available())
+  let app = mount(Timeout { limit: 5min })
+  await sleep(4min)
+  expect(activity.idle() == 4min)
+  app.expect("Signed in")
+  user.input()
+  expect(activity.idle() == 0s)
+  await sleep(4min)
+  app.expect("Signed in")
+  app.expect("heard 1")
+  await sleep(1min + 1s)
+  app.expect("Signed out")
+}
+
+test "inputs come as the user gives them" {
+  let user = activity.fake()
+  let app = mount(Timeout { limit: 1h })
+  await sleep(1s)
+  user.input()
+  await sleep(500ms)
+  user.input() // within the second: heard once
+  await sleep(2s)
+  user.input()
+  await sleep(1s)
+  app.expect("heard 2")
+  expect(user.idle() == 1s)
+}

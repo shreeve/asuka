@@ -85,7 +85,7 @@ import AppKit
     func observe(_ w: UIWindow) {
         if w.gestureRecognizers?.contains(where: { $0 is ActivityTouches }) == true { return }
         w.addGestureRecognizer(ActivityTouches())
-        w.addGestureRecognizer(ActivityScrolls())
+        w.addGestureRecognizer(ActivityScrolls(watch: self))
     }
 
     @objc func scrolled(_ g: UIPanGestureRecognizer) {
@@ -118,10 +118,13 @@ final class ActivityTouches: UIGestureRecognizer, UIGestureRecognizerDelegate {
 }
 
 /// A pan over a trackpad's or mouse's scrolling only (no touches), which
-/// recognizes alongside the scroll views' own.
+/// recognizes alongside the scroll views' own. It's given the watch it
+/// reports to: made while InputWatch.shared is being made (its init
+/// observes the windows already shown), it can't reach for shared, whose
+/// one-time initialization would wait on itself and trap.
 final class ActivityScrolls: UIPanGestureRecognizer, UIGestureRecognizerDelegate {
-    init() {
-        super.init(target: InputWatch.shared, action: #selector(InputWatch.scrolled(_:)))
+    init(watch: InputWatch) {
+        super.init(target: watch, action: #selector(InputWatch.scrolled(_:)))
         allowedScrollTypesMask = .all
         allowedTouchTypes = []
         cancelsTouchesInView = false

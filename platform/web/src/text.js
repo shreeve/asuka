@@ -46,7 +46,9 @@ export function applyFont(h, n, el, scale = 1) {
   const s = el.style;
   s.fontSize = (size * scale) / 16 + "rem";
   s.fontWeight = String(weight);
-  s.lineHeight = String(line);
+  // a Font's own line height in rem, exact as the size is (a multiple of the
+  // size, 20/15, comes out a hair under 20 and moves the text half a pixel)
+  s.lineHeight = n.font.lineHeight > 0 ? (n.font.lineHeight * scale) / 16 + "rem" : String(line);
   s.fontFamily = family;
 }
 

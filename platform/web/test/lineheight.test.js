@@ -15,3 +15,15 @@ test("no line height keeps the text style's", () => {
   assert.equal(fontOf(h, { style: 0, size: 13, weight: 0, family: "", lineHeight: 0 })[2], 1.375);
   assert.equal(fontOf(h, { style: 0, size: 13, weight: 0, family: "" })[2], 1.375);
 });
+
+test("applyFont sets a Font's own line height in rem, exactly, scaled as the size is", async () => {
+  const { applyFont } = await import("../src/text.js");
+  const el = { style: {} };
+  applyFont({ fontFiles: () => [] }, { font: { style: 0, size: 15, weight: 0, family: "", lineHeight: 20 } }, el);
+  assert.equal(el.style.lineHeight, "1.25rem");
+  assert.equal(el.style.fontSize, "0.9375rem");
+  applyFont({ fontFiles: () => [] }, { font: { style: 0, size: 15, weight: 0, family: "", lineHeight: 20 } }, el, 2);
+  assert.equal(el.style.lineHeight, "2.5rem");
+  applyFont({ fontFiles: () => [] }, { font: { style: 0, size: 13, weight: 0, family: "", lineHeight: 0 } }, el);
+  assert.equal(el.style.lineHeight, "1.375");
+});

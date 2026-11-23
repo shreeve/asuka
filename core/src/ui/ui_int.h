@@ -150,7 +150,7 @@ typedef struct {
 	int32_t variant;
 	ak_str *text, *text2, *family;  // retained
 	int32_t font_style, font_weight;
-	float font_size;
+	float font_size, line_height;
 	int64_t lines;
 	float font_scale, scale;
 	bool inset;

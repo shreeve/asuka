@@ -141,6 +141,7 @@ public enum AsukaProp {
     public static let a11yControls: UInt16 = 48
     public static let a11yLabelledBy: UInt16 = 49
     public static let a11yDescribedBy: UInt16 = 50
+    public static let lineHeight: UInt16 = 51
 
     public enum View {
         public static let dropAccept: UInt16 = 64

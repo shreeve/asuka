@@ -524,6 +524,7 @@ static ak_lsize measure_cb(void *ctx, ak_lconstraints c) {
 		k.font_size = (float)f->f[1].f;
 		k.font_weight = (int32_t)f->f[2].i;
 		k.family = f->f[3].p;
+		k.line_height = (float)f->f[4].f;
 	}
 	k.lines = ak_style_int(e, AK_KEY_LINES, 0);
 	k.font_scale = ak_view_font_scale(e);

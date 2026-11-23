@@ -439,7 +439,7 @@ static void send(ak_view *e, uint16_t key, const ak_val *v, const ak_val *prev) 
 	case AK_KEY_COLOR: ak_batch_set_color(b, id, AK_PROP_COLOR, (ak_color)x.i); break;
 	case AK_KEY_FONT: {
 		if (!text) break;
-		// style, size, weight, family: each sent as it changed.
+		// style, size, weight, family, line height: each sent as it changed.
 		const ak_struct *f = x.p, *o = prev ? prev->p : NULL;
 		int64_t st = f ? f->f[0].i : 0, ost = o ? o->f[0].i : 0;
 		double sz = f ? f->f[1].f : 0, osz = o ? o->f[1].f : 0;
@@ -450,6 +450,8 @@ static void send(ak_view *e, uint16_t key, const ak_val *v, const ak_val *prev) 
 		if (!ak_obj_eq((const ak_obj *)fam, (const ak_obj *)ofam) && (fam ? fam->len : 0) + (ofam ? ofam->len : 0) > 0)
 			ak_batch_set_string(b, id, AK_PROP_FONT_FAMILY, fam ? fam->data : "", fam ? fam->len : 0);
 		if (wt != owt) ak_batch_set_enum(b, id, AK_PROP_FONT_WEIGHT, (int32_t)wt);
+		double lh = f ? f->f[4].f : 0, olh = o ? o->f[4].f : 0;
+		if (lh != olh) ak_batch_set_float(b, id, AK_PROP_LINE_HEIGHT, lh);
 		break;
 	}
 	case AK_KEY_TEXT_ALIGN:
@@ -500,7 +502,7 @@ static bool is_zero(uint16_t key, ak_val v) {
 		if (key == AK_KEY_FONT) {
 			const ak_struct *f = v.p;
 			const ak_str *fam = f->f[3].p;
-			return f->f[0].i == 0 && f->f[1].f == 0 && f->f[2].i == 0 && (!fam || fam->len == 0);
+			return f->f[0].i == 0 && f->f[1].f == 0 && f->f[2].i == 0 && (!fam || fam->len == 0) && f->f[4].f == 0;
 		}
 		return false;
 	}

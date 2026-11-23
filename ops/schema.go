@@ -133,6 +133,7 @@ var Schema = SchemaDef{
 		{Name: "A11yControls", Type: TInt, Doc: "the view (a node ID; 0: none) this one controls (a combobox's listbox, a tab's panel): UIA's ControllerFor, GTK_ACCESSIBLE_RELATION_CONTROLS, aria-controls; Android's and Apple's platforms have no such relation and ignore it"},
 		{Name: "A11yLabelledBy", Type: TInt, Doc: "the view (a node ID; 0: none) whose text labels this one (a field's label): accessibilityLabel taken from its text where the platform has no relation (iOS), setLabeledBy, AXTitleUIElement, UIA's LabeledBy, GTK_ACCESSIBLE_RELATION_LABELLED_BY, aria-labelledby"},
 		{Name: "A11yDescribedBy", Type: TInt, Doc: "the view (a node ID; 0: none) whose text describes this one (a field's description or error): accessibilityHint from its text where the platform has no relation, AXHelp's text, UIA's DescribedBy, GTK_ACCESSIBLE_RELATION_DESCRIBED_BY, aria-describedby"},
+		{Name: "LineHeight", Type: TFloat, Doc: "the height of a line of the text, in points at the user's default text size, scaled with it as FontSize is (Font's lineHeight; 0: the platform's for the text style). The web sets it; the other hosts keep their own line height for now"},
 	},
 	Kinds: []KindDef{
 		{Name: "View", Props: []PropDef{

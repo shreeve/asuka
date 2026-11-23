@@ -64,6 +64,7 @@ const ak_prop_info ak_common_props[AK_COMMON_PROP_COUNT] = {
 	{"A11yControls", AK_T_INT, -1},
 	{"A11yLabelledBy", AK_T_INT, -1},
 	{"A11yDescribedBy", AK_T_INT, -1},
+	{"LineHeight", AK_T_FLOAT, -1},
 };
 
 static const ak_prop_info props_View[] = {

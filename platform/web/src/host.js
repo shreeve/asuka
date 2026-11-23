@@ -46,7 +46,7 @@ export class Node {
     this.placed = false;
     this.impl = null;
     // Common props, as last set.
-    this.font = { style: 0, size: 0, weight: 0, family: "" };
+    this.font = { style: 0, size: 0, weight: 0, family: "", lineHeight: 0 };
     this.color = 0;
     this.background = 0;
     this.borderColor = 0;
@@ -561,6 +561,10 @@ export class Host {
       case Prop.FontFamily:
         n.font.family = v;
         text.loadFamily(this, v);
+        this.fontChanged(n);
+        break;
+      case Prop.LineHeight:
+        n.font.lineHeight = v;
         this.fontChanged(n);
         break;
       case Prop.TextAlign:

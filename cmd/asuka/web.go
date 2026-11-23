@@ -727,6 +727,9 @@ func (s *devServer) index(w http.ResponseWriter) {
 	if s.vapid != "" {
 		opts["vapidPublicKey"] = s.vapid
 	}
+	if f := s.app.cfg.Web.FontFeatures; len(f) > 0 {
+		opts["fontFeatures"] = f
+	}
 	if *s.sqlite.Load() != "" {
 		opts["sqlite"] = "asuka/" + webSQLitePath
 	}
@@ -1027,6 +1030,9 @@ func buildWeb(app *asukaApp, o *buildOptions) error {
 	}
 	if icon {
 		opts["icon"] = "icons/icon-192.png"
+	}
+	if f := app.cfg.Web.FontFeatures; len(f) > 0 {
+		opts["fontFeatures"] = f
 	}
 	if vapid != "" {
 		opts["vapidPublicKey"] = vapid

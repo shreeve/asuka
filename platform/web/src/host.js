@@ -69,6 +69,11 @@ export class Node {
   listening(e) { return this.listens.has(e); }
 }
 
+/** fontFeatures is font-feature-settings for OpenType feature tags: ["tnum", "cv11"] is "tnum", "cv11". */
+export function fontFeatures(tags) {
+  return tags.filter((t) => /^[a-zA-Z0-9]{4}$/.test(t)).map((t) => `"${t}"`).join(", ");
+}
+
 export class Host {
   /**
    * container: the element the app fills (it follows the container's
@@ -99,6 +104,8 @@ export class Host {
     this.drawn = false; // its first batch is applied: the container is asuka-drawn
     this.natives = new Map(); // asuka.registerNative's factories, by kind
     this.fonts = options.fonts || []; // the app's font files (assets/fonts)
+    // The OpenType features the app's text has on (asuka.toml's web.fontFeatures)
+    if (options.fontFeatures?.length) container.style.fontFeatureSettings = fontFeatures(options.fontFeatures);
     container.classList.add("asuka");
     this.interaction = new Interaction(this);
     this.nav = new Navigation(this);

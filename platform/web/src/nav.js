@@ -103,6 +103,19 @@ function onBackdropPress(d, f) {
   });
 }
 
+/**
+ * pop opens (or closes) a movable sheet's dialog as a desktop's dialog
+ * does: from 95% of its size and transparent to all of it, 250 ms easing
+ * out, and back in 150 ms; its backdrop fades with it.
+ */
+export function pop(d, open) {
+  const k = [{ opacity: 0, transform: "scale(0.95)" }, { opacity: 1, transform: "none" }];
+  const opts = { duration: open ? 250 : 150, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: open ? "none" : "forwards" };
+  const fade = open ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }];
+  d.animate(fade, { ...opts, pseudoElement: "::backdrop" });
+  return d.animate(open ? k : k.slice().reverse(), opts);
+}
+
 export class Navigation {
   constructor(h) {
     this.h = h;
@@ -616,8 +629,8 @@ export class Navigation {
     const wide = this.wide() && !n.fullScreen;
     const begin = () => {
       if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        // A movable one fades in where it opens, as a desktop's dialog does.
-        if (n.mv) d.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 120, easing: "cubic-bezier(0.2, 0, 0, 1)" });
+        // A movable one pops in where it opens, as a desktop's dialog does.
+        if (n.mv) pop(d, true);
         else d.animate(wide ? [{ opacity: 0, transform: "scale(0.96)" }, { opacity: 1, transform: "none" }] : [{ transform: "translateY(100%)" }, { transform: "none" }], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
       }
     };
@@ -876,6 +889,7 @@ export class Navigation {
     d.classList.add("asuka-exiting");
     const done = () => { d.close(); d.remove(); };
     if (matchMedia("(prefers-reduced-motion: reduce)").matches || !d.isConnected) done();
+    else if (n.mv) pop(d, false).onfinish = done;
     else {
       const wide = (d.classList.contains("asuka-wide") || n.kind !== Kind.Sheet) && !d.classList.contains("asuka-full-screen");
       d.animate(wide ? [{ opacity: 1 }, { opacity: 0 }] : [{ transform: "none" }, { transform: "translateY(100%)" }], { duration: 220, easing: "ease-in", fill: "forwards" }).onfinish = done;

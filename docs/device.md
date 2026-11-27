@@ -1637,6 +1637,87 @@ network, it's `connected` with the `type` `.other`.
 `network.current()` is the network now, untracked, and
 `network.changes()` a stream of it: now, then at each change.
 
+## The user's activity: platform/activity
+
+`platform/activity` says when the user last gave the app input: a press
+(a mouse's button, a finger or a pen touching down, a trackpad's click),
+a key, a wheel or trackpad scroll, a text edit (a software keyboard's
+too). A pointer only moving doesn't count, nor what the app does itself
+(a scroll it starts, a field's text it sets). Use it for an inactivity
+timeout: a warning, then signing out, after so long with no input. It
+only watches: the app's views get every event as before.
+
+`activity.idle()` is how long since the last input, `activity.lastInput()`
+when it was (a `time.Time`), and `activity.inputs()` a stream of each
+input's time, at most one a second.
+
+```asuka
+import platform/activity
+
+component SignedIn {
+  prop limit: Duration
+  prop warning: Duration
+  state left: Duration? = none
+  state signedOut = false
+
+  // Asleep until the warning's due; then a countdown, which input ends.
+  task {
+    while !signedOut {
+      let idle = activity.idle()
+      if idle >= limit {
+        signedOut = true
+      } else if idle >= limit - warning {
+        left = limit - idle
+        await sleep(1s)
+      } else {
+        left = none
+        await sleep(limit - warning - idle)
+      }
+    }
+  }
+
+  Column {
+    if signedOut {
+      Text("Signed out")
+    } else if let l = left {
+      Text("Signing out in {l.seconds().fixed(0)} seconds")
+    } else {
+      Text("Signed in")
+    }
+  }
+}
+```
+
+The platforms watch every window of the app, never taking an event from
+its views: on iOS a gesture recognizer on each window that sees a touch
+or a key's press begin and fails at once, a pan that takes no touches
+for a trackpad's or mouse's scrolling, and the text fields' and text
+views' changes; on the Mac a local event monitor and the text views'
+changes; on Windows a hook on the main thread's messages; on Linux
+controllers in the capture phase of each window; in a browser the
+document's capturing, passive listeners (`pointerdown`, `keydown`,
+`wheel`, `input`). The clock goes on while the device sleeps, so the
+time asleep counts as idle. Android hasn't it yet: there, and where an
+app runs with no platform code (`asuka test`'s host, a program),
+`activity.available()` is false and `idle()` is the time since the app
+started. `power.idleTime()` is the other kind: the whole computer's,
+every app's input, on desktops only.
+
+Tests drive a fake: `activity.fake()` gives a `FakeActivity`, whose
+`input()` is the user's, on the test's clock.
+
+```asuka
+test "a warning, then signing out" {
+  let user = activity.fake()
+  let app = mount(SignedIn { limit: 15min; warning: 30s })
+  await sleep(14min + 40s + 500ms)
+  app.expect("Signing out in 20 seconds")
+  user.input()
+  await sleep(1s)
+  app.expect("Signed in")
+}
+```
+
 ## Saving to the library: platform/library
 
 `platform/library` saves files where the user and other apps find them: a

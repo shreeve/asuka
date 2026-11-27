@@ -98,6 +98,7 @@ export const Prop = Object.freeze({
   A11yControls: 48,
   A11yLabelledBy: 49,
   A11yDescribedBy: 50,
+  LineHeight: 51,
 });
 
 /** Each kind's own props, from 64. */

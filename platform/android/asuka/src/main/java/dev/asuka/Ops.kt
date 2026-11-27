@@ -144,6 +144,7 @@ object AsukaProp {
     const val A11Y_CONTROLS = 48
     const val A11Y_LABELLED_BY = 49
     const val A11Y_DESCRIBED_BY = 50
+    const val LINE_HEIGHT = 51
 
     object View {
         const val DROP_ACCEPT = 64

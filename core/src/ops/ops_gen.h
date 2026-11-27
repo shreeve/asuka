@@ -207,7 +207,9 @@ enum {
 	AK_PROP_A11Y_LABELLED_BY = 49,
 	// the view (a node ID; 0: none) whose text describes this one (a field's description or error): accessibilityHint from its text where the platform has no relation, AXHelp's text, UIA's DescribedBy, GTK_ACCESSIBLE_RELATION_DESCRIBED_BY, aria-describedby
 	AK_PROP_A11Y_DESCRIBED_BY = 50,
-	AK_COMMON_PROP_COUNT = 51,
+	// the height of a line of the text, in points at the user's default text size, scaled with it as FontSize is (Font's lineHeight; 0: the platform's for the text style). The web sets it; the other hosts keep their own line height for now
+	AK_PROP_LINE_HEIGHT = 51,
+	AK_COMMON_PROP_COUNT = 52,
 	AK_FIRST_KIND_PROP = 64,
 };
 

@@ -53,17 +53,20 @@ struct Edges {
 }
 
 /// A font: a text style the platform scales with the user's text size,
-/// a size, a weight, and a family of the app's (assets/fonts) or the
-/// system's.
+/// a size, a weight, a family of the app's (assets/fonts) or the
+/// system's, and the height of a line of it (0: the platform's for the
+/// style; scaled with the text, as the size is).
 ///
 ///   font: .title
 ///   font: .largeTitle.bold
 ///   font: Font(size: 17, weight: .semibold, family: "Inter")
+///   font: Font(size: 13, lineHeight: 18)
 struct Font {
   style: TextStyle = .default
   size: float = 0
   weight: FontWeight = .default
   family: string = ""
+  lineHeight: float = 0
 
   let largeTitle = Font(style: .largeTitle)
   let title = Font(style: .title)
@@ -77,9 +80,11 @@ struct Font {
   let caption = Font(style: .caption)
   let caption2 = Font(style: .caption2)
 
-  fn weighted(weight: FontWeight) -> Font = Font(style: style, size: size, weight: weight, family: family)
-  fn sized(size: float) -> Font = Font(style: style, size: size, weight: weight, family: family)
-  fn family(name: string) -> Font = Font(style: style, size: size, weight: weight, family: name)
+  fn weighted(weight: FontWeight) -> Font = Font(style: style, size: size, weight: weight, family: family, lineHeight: lineHeight)
+  fn sized(size: float) -> Font = Font(style: style, size: size, weight: weight, family: family, lineHeight: lineHeight)
+  fn family(name: string) -> Font = Font(style: style, size: size, weight: weight, family: name, lineHeight: lineHeight)
+  /// The font with lines height points high.
+  fn lineHeight(height: float) -> Font = Font(style: style, size: size, weight: weight, family: family, lineHeight: height)
   fn bold() -> Font = weighted(.bold)
   fn semibold() -> Font = weighted(.semibold)
   fn medium() -> Font = weighted(.medium)

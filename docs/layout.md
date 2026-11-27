@@ -446,6 +446,11 @@ Transforms, `transition` and `shared` are for animation: see
 - **A weight**: `.bold()`, `.semibold()`, `.medium()`, or `weighted(w)`
   with any of `.ultralight`, `.thin`, `.light`, `.regular`, `.medium`,
   `.semibold`, `.bold`, `.heavy`, `.black`.
+- **A line height**: `Font(size: 13, lineHeight: 18)` or
+  `.lineHeight(18)`, the height of a line in points, scaled with the
+  text as the size is; 0, the default, is the platform's for the style.
+  The web sets it; the other platforms keep their own line height for
+  now.
 
 `color` is the text's color, `textAlign` its alignment (`.start`,
 `.center`, `.end`, `.justify`), and `lines` the most lines it shows; 0,

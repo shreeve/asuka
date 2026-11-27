@@ -27,6 +27,8 @@ uint32_t ak_mkey_hash(const ak_mkey *k) {
 	uint32_t u;
 	memcpy(&u, &k->font_size, 4);
 	h = mix(h, u);
+	memcpy(&u, &k->line_height, 4);
+	h = mix(h, u);
 	h = mix(h, (uint32_t)k->lines);
 	memcpy(&u, &k->font_scale, 4);
 	h = mix(h, u);
@@ -54,7 +56,7 @@ static bool str_same(const ak_str *a, const ak_str *b) {
 
 static bool key_eq(const ak_mkey *a, const ak_mkey *b) {
 	return a->kind == b->kind && a->variant == b->variant && a->font_style == b->font_style && a->font_weight == b->font_weight &&
-	       memcmp(&a->font_size, &b->font_size, 4) == 0 && a->lines == b->lines && memcmp(&a->font_scale, &b->font_scale, 4) == 0 &&
+	       memcmp(&a->font_size, &b->font_size, 4) == 0 && memcmp(&a->line_height, &b->line_height, 4) == 0 && a->lines == b->lines && memcmp(&a->font_scale, &b->font_scale, 4) == 0 &&
 	       memcmp(&a->scale, &b->scale, 4) == 0 && a->inset == b->inset && memcmp(a->c, b->c, sizeof a->c) == 0 &&
 	       str_same(a->text, b->text) && str_same(a->text2, b->text2) && str_same(a->family, b->family);
 }

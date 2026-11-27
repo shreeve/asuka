@@ -28,14 +28,16 @@ const generic = {
   rounded: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif',
 };
 
-/** style is a node's font: [px at the default text size, weight, line height, family]. */
+/** style is a node's font: [px at the default text size, weight, line height (a multiple of the size), family]. */
 export function fontOf(h, f) {
   const r = ramp[f.style] || ramp[0];
   const size = f.size > 0 ? f.size : r[0];
   const weight = f.weight > 0 ? weights[f.weight] : r[1];
   let family = systemFont;
   if (f.family) family = familyCSS(h, f.family);
-  return [size, weight, r[2], family];
+  // a line height in points, as a multiple of the size: it scales with the text
+  const line = f.lineHeight > 0 ? f.lineHeight / size : r[2];
+  return [size, weight, line, family];
 }
 
 /** applyFont sets el's font from n's text props, in rem: it follows the browser's text size. */
@@ -44,7 +46,9 @@ export function applyFont(h, n, el, scale = 1) {
   const s = el.style;
   s.fontSize = (size * scale) / 16 + "rem";
   s.fontWeight = String(weight);
-  s.lineHeight = String(line);
+  // a Font's own line height in rem, exact as the size is (a multiple of the
+  // size, 20/15, comes out a hair under 20 and moves the text half a pixel)
+  s.lineHeight = n.font.lineHeight > 0 ? (n.font.lineHeight * scale) / 16 + "rem" : String(line);
   s.fontFamily = family;
 }
 

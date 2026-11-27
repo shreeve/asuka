@@ -11,9 +11,9 @@
 // ---- Spans to the wire ----
 
 static const ak_shape *const no_shapes[12];
-static const uint8_t font_kinds[] = {AK_K_INT, AK_K_FLOAT, AK_K_INT, AK_K_REF};
-static const char *const font_names[] = {"style", "size", "weight", "family"};
-const ak_shape ak_ui_shape_font = {"Font", 4, font_kinds, no_shapes, font_names, 0, NULL, false, NULL};
+static const uint8_t font_kinds[] = {AK_K_INT, AK_K_FLOAT, AK_K_INT, AK_K_REF, AK_K_FLOAT};
+static const char *const font_names[] = {"style", "size", "weight", "family", "lineHeight"};
+const ak_shape ak_ui_shape_font = {"Font", 5, font_kinds, no_shapes, font_names, 0, NULL, false, NULL};
 
 static const uint8_t span_kinds[] = {AK_K_REF, AK_K_REF, AK_K_BOOL, AK_K_BOOL, AK_K_BOOL, AK_K_BOOL, AK_K_INT, AK_K_INT, AK_K_REF, AK_K_REF};
 static const char *const span_names[] = {"text", "font", "italic", "mono", "underline", "strike", "color", "background", "link", "inline"};

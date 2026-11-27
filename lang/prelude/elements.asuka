@@ -757,6 +757,12 @@ native component Sheet() {
   prop grabber: bool
   /// covers the screen; the user can't swipe it away
   prop fullScreen: bool
+  /// on a desktop, a dialog the user can move (a Mac's modal window, the web's panel) rather than a sheet attached to the window; phones ignore it
+  prop movable: bool
+  /// with movable, the user can also resize it; a movable sheet isn't resizable without it, as a desktop's dialogs aren't
+  prop resizable: bool
+  /// with movable, a press outside it dismisses it, as Escape does; a movable sheet takes no press outside without it
+  prop dismissOutside: bool
   event change(open: bool)
   /// the user dismissed it
   event dismiss

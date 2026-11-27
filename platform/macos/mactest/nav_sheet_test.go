@@ -3,6 +3,8 @@
 package mactest
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 )
@@ -538,4 +540,220 @@ func TestNavZoomFrom(t *testing.T) {
 	if !shown(tr, "Tile 2") {
 		t.Fatalf("the tile the screen zoomed back into stayed hidden:\n%s", tr.Raw())
 	}
+}
+
+// A movable sheet is a window of its own, not a sheet, nor a child window
+// (which the window server doesn't drag smoothly): centered over its
+// window and in front of it, the key window, faded in where it opens (no
+// zoom or bounce of AppKit's own), which the user can move, and resize
+// when it's resizable. Its window takes no presses meanwhile. A fit one
+// opens at its content's size, the least the user can size it to; after
+// that its size is its window's, which its content is laid out at,
+// whatever the content does. Escape and its close button dismiss it.
+func TestNavMovableSheet(t *testing.T) {
+	a := Run(t, `
+		app { Root() }
+		component Root {
+		  state open = false
+		  state taps = 0
+		  state more = false
+		  Column {
+		    padding: 20
+		    Text("open {open} taps {taps}")
+		    Button("Show") { on press { open = true } }
+		    Button("Count") { on press { taps += 1 } }
+		    Sheet {
+		      bind open: open
+		      detents: [.fit]
+		      movable: true
+		      resizable: true
+		      Column {
+		        padding: 20
+		        View { height: 100; background: .blue }
+		        if more { View { height: 50; background: .green } }
+		        Button("More") { on press { more = !more } }
+		        Text("sheet {environment().width}x{environment().height}")
+		      }
+		    }
+		  }
+		}
+	`)
+	a.UntilText("open false taps 0")
+	a.Do("tap Show")
+	shown := func(what string, ok func(w map[string]any, s *Node) bool) *Tree {
+		t.Helper()
+		return a.Until(func(tr *Tree) bool {
+			s := sheetOf(tr)
+			if s == nil {
+				return false
+			}
+			w := sheetWindow(s)
+			return w["visible"] == true && w["isSheet"] == false && ok(w, s)
+		})
+	}
+	// The key window, while the app is active (macOS doesn't activate a
+	// test's player while the user works in another app).
+	keyed := func(w map[string]any) bool { return w["key"] == true || !appActive(a.Tree()) }
+	tr := shown("opened", func(w map[string]any, s *Node) bool {
+		return w["over"] != "" && keyed(w) && w["alpha"] == 1.0 && w["animation"] == 2.0 && w["blocks"] == true
+	})
+	main := tr.Main()
+	s := sheetOf(tr)
+	w := sheetWindow(s)
+	if p := w["over"]; p != tr.Main().Title {
+		t.Fatalf("over %q, not the main window %q", p, tr.Main().Title)
+	}
+	if p := w["childOf"]; p != "" {
+		t.Fatalf("a child window of %q: the window server doesn't drag it smoothly", p)
+	}
+	if m := int(w["styleMask"].(float64)); m&styleResizable == 0 || m&styleClosable == 0 {
+		t.Fatalf("style mask %#x: a movable sheet the user can't resize or close", m)
+	}
+	// No title bar: its content, from its own header down, fills the
+	// window, which the user drags by its background.
+	if m := int(w["styleMask"].(float64)); m&styleFullSizeContent == 0 {
+		t.Fatalf("style mask %#x: its content under a title bar", m)
+	}
+	if b := w["titleBar"]; b != false {
+		t.Fatalf("title bar %v: a movable sheet shows no title, buttons or title bar", b)
+	}
+	if w["byBackground"] != true {
+		t.Fatal("not movable by its background")
+	}
+	cw, ch := size(w["content"])
+	if fw, fh := size(w["frame"]); cw != fw || ch != fh {
+		t.Fatalf("content %v in frame %v: not all of its window", w["content"], w["frame"])
+	}
+	// Centered over the main window.
+	mf := main.Frame
+	if len(mf) < 4 {
+		t.Fatalf("the main window has no frame: %v", mf)
+	}
+	sx, sy := pair(w["frame"])
+	sw, sh := size(w["frame"])
+	if d := (mf[0] + mf[2]/2) - (sx + sw/2); d > 1 || d < -1 {
+		t.Fatalf("not centered across: main %v, sheet %v", mf, w["frame"])
+	}
+	if d := (mf[1] + mf[3]/2) - (sy + sh/2); d > 1 || d < -1 {
+		t.Fatalf("not centered down: main %v, sheet %v", mf, w["frame"])
+	}
+	// At its content's height, and following it.
+	bh := tr.Find("Button", "More").Frame[3]
+	th := -1.0
+	for _, n := range tr.All() {
+		if n.Kind == "Text" && strings.HasPrefix(n.Text, "sheet ") {
+			th = n.Frame[3]
+		}
+	}
+	base := 20 + 100 + bh + th + 20
+	fits := func(what string, h float64) {
+		t.Helper()
+		shown(what, func(w map[string]any, s *Node) bool { _, ch := size(w["content"]); return ch == h })
+	}
+	fits("opened at its content's height", base)
+	if min, ok := sheetWindow(sheetOf(a.Tree()))["minSize"].([]any); !ok || len(min) < 2 || min[1].(float64) != base {
+		t.Fatalf("its least size %v, not its content's height %v", sheetWindow(sheetOf(a.Tree()))["minSize"], base)
+	}
+	// Its content grows: the window keeps its size, its environment that size.
+	a.Do("tap More")
+	shown("its size kept", func(w map[string]any, s *Node) bool {
+		cw, ch := size(w["content"])
+		ew, eh := pair(s.Get("env"))
+		return ch == base && ew == cw && eh == ch
+	})
+	// A click on its window goes nowhere.
+	a.Do("click Count")
+	// The user resizes it: its environment is that size, as its content
+	// changes too.
+	a.Do("sheetresize 500,420")
+	shown("resized", func(w map[string]any, s *Node) bool {
+		cw, ch := size(w["content"])
+		ew, eh := pair(s.Get("env"))
+		return cw == 500 && ch == 420 && ew == 500 && eh == 420
+	})
+	a.Do("tap More")
+	a.UntilText("sheet 500x420")
+	shown("the user's size kept", func(w map[string]any, s *Node) bool { cw, ch := size(w["content"]); return cw == 500 && ch == 420 })
+	// Its close button dismisses it; the click before it never counted.
+	a.Do("sheetclose")
+	a.UntilText("open false taps 0")
+	a.Until(func(tr *Tree) bool { return sheetOf(tr) == nil })
+	// Its window takes clicks again.
+	a.Do("click Count")
+	a.UntilText("open false taps 1")
+	// Opened again, Escape dismisses it.
+	a.Do("tap Show")
+	shown("opened again", func(w map[string]any, s *Node) bool { return keyed(w) })
+	a.Do("cancel")
+	a.UntilText("open false taps 1")
+}
+
+// appActive is whether the player is the active app.
+
+// A movable sheet that isn't resizable, as a desktop's dialogs aren't:
+// its window has no resizing, but is still closable (⌘W) and dragged by
+// its background, without a title bar; a fit one follows its content, as
+// any fit sheet.
+func TestNavMovableSheetFixedSize(t *testing.T) {
+	a := Run(t, `
+		app { Root() }
+		component Root {
+		  state open = false
+		  state more = false
+		  Column {
+		    padding: 20
+		    Text("open {open}")
+		    Button("Show") { on press { open = true } }
+		    Sheet {
+		      bind open: open
+		      detents: [.fit]
+		      movable: true
+		      Column {
+		        padding: 20
+		        View { height: 100; background: .blue }
+		        if more { View { height: 50; background: .green } }
+		        Button("More") { on press { more = !more } }
+		        Text("fixed sheet")
+		      }
+		    }
+		  }
+		}
+	`)
+	a.UntilText("open false")
+	a.Do("tap Show")
+	tr := a.Until(func(tr *Tree) bool {
+		s := sheetOf(tr)
+		return s != nil && sheetWindow(s)["visible"] == true
+	})
+	w := sheetWindow(sheetOf(tr))
+	m := int(w["styleMask"].(float64))
+	if m&styleResizable != 0 {
+		t.Fatalf("style mask %#x: a movable sheet the user resizes without resizable", m)
+	}
+	if m&styleClosable == 0 || m&styleFullSizeContent == 0 {
+		t.Fatalf("style mask %#x: not closable, or its content under a title bar", m)
+	}
+	if w["byBackground"] != true {
+		t.Fatal("not movable by its background")
+	}
+	// Its content grows: so does it.
+	_, h0 := frameSize(sheetOf(tr))
+	a.Do("tap More")
+	a.Until(func(tr *Tree) bool {
+		s := sheetOf(tr)
+		if s == nil {
+			return false
+		}
+		_, h := frameSize(s)
+		return h == h0+50
+	})
+}
+func appActive(tr *Tree) bool {
+	var d struct {
+		App struct {
+			Active bool `json:"active"`
+		} `json:"app"`
+	}
+	json.Unmarshal([]byte(tr.Raw()), &d)
+	return d.App.Active
 }

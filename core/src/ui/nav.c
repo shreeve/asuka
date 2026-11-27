@@ -333,6 +333,16 @@ static void layout_fit_sheet(ak_ui_root *r, ak_view *e, ak_lpass *lp) {
 	if (p->fit_sent && s.w == p->laid.w && s.h == p->laid.h) return;
 	p->laid = s, p->fit_sent = true;
 	send_fit(r, e, s);
+	if (p->fit_once) {
+		// A resizable movable sheet: as big as its content as it opens,
+		// and after that as big as the user makes it, its content filling
+		// it. One that isn't resizable follows its content, as any fit
+		// sheet.
+		p->fit_once = p->fit_sheet = false;
+		ak_lstyle ns = *ak_lnode_style(e->box);
+		ns.width = ak_lpct(100), ns.height = ak_lpct(100), ns.max_height = AK_LAUTO;
+		ak_lnode_set_style(e->box, &ns);
+	}
 }
 
 // layout_fit_window lays a window sized to its content out at its

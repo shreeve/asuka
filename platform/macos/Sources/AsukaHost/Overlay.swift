@@ -133,6 +133,7 @@ private func asukaRankOrder(_ a: NSView, _ b: NSView, _ ctx: UnsafeMutableRawPoi
     /// that overlay).
     func behindModal(_ v: NSView) -> Bool {
         guard let w = v.window else { return false }
+        if blockingSheet(w) != nil { return true } // a movable sheet over its window (Navigation.swift)
         for o in modalOverlays(w) {
             guard let ov = o.view else { continue }
             if v !== ov && !v.isDescendant(of: ov) { return true }
@@ -165,6 +166,7 @@ private func asukaRankOrder(_ a: NSView, _ b: NSView, _ ctx: UnsafeMutableRawPoi
             reportOverlayEnv(n)
         }
         for host in hosts.values { raiseOverlays(host) }
+        raiseBlockers()
         reportAnchors()
     }
 

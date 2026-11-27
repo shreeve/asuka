@@ -1,0 +1,62 @@
+// SheetMovable is a web e2e's app (e2e/sheet_movable_web_test.go): a
+// movable, resizable sheet with no bar, which the user moves by its
+// background and resizes by its corner, closing it with its own button,
+// its environment its content's size; a movable sheet that isn't
+// resizable; one that a press outside dismisses (dismissOutside); and a
+// counter on the page behind them, which takes no press while one shows.
+
+component Root {
+  state open = false
+  state fixed = false
+  state outside = false
+  state taps = 0
+
+  Column {
+    padding: 12
+    gap: 6
+    Text("status: ready")
+    Text("open {open} taps {taps}")
+    Button("Show") { on press { open = true } }
+    Button("Count") { on press { taps += 1 } }
+    Button("Show fixed") { on press { fixed = true } }
+    Button("Show outside") { on press { outside = true } }
+    Text("outside {outside}")
+    Sheet {
+      bind open: open
+      movable: true
+      resizable: true
+      Column {
+        padding: 20
+        gap: 8
+        Text("sheet {environment().width}x{environment().height}")
+        Button("Done") { on press { open = false } }
+      }
+    }
+    Sheet {
+      bind open: outside
+      movable: true
+      dismissOutside: true
+      Column {
+        padding: 20
+        Text("outside sheet")
+      }
+    }
+    Sheet {
+      bind open: fixed
+      movable: true
+      Column {
+        padding: 20
+        Text("fixed sheet")
+        Button("Done fixed") { on press { fixed = false } }
+      }
+    }
+  }
+}
+
+app { Root() }
+
+test "it runs on the fake host" {
+  let app = mount(Root())
+  app.tap("Show")
+  app.expect("open true taps 0")
+}

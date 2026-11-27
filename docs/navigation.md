@@ -659,6 +659,54 @@ component Notes {
 - Its content is built when it opens and disposed when it closes, so
   state made in it starts fresh each time.
 
+### Movable sheets
+
+`movable: true` makes a sheet on a desktop a dialog the user can move,
+as a desktop's modal dialogs are, rather than a sheet attached to the
+window: for a detail or a form the user wants to look at beside what's
+under it. It's as modal as a sheet: what's
+behind it takes no input until it closes, and Escape dismisses it; a
+click outside it doesn't, unless it says `dismissOutside: true`. It has no title bar: its content is all of it,
+its own header its top (give it a Close), and the user moves it by its
+background, anywhere that isn't a control, a pressable view or text to
+select. It opens
+centered over its window at the size `detents` gives; a `.fit` one is
+as big as its content and follows it as it changes, as any `.fit` sheet.
+`resizable: true` lets the user resize it too, for content that's
+worth seeing larger, such as a long report: a movable sheet isn't
+resizable without it, as a desktop's dialogs aren't (a `Window` is
+resizable unless it says `resizable: false`). A resizable `.fit` sheet
+opens at its content's size, which is then the least the user can size
+it to, and after that keeps the size the user gives it, which its
+content fills. `dismissOutside: true` makes a click outside it dismiss
+it as Escape does, for a dialog the user glances at and leaves, such as a
+detail opened from a list: without it, a click outside does nothing (a
+Mac beeps), as a desktop's modal dialog does.
+
+```asuka
+component Report {
+  state showing = false
+  prop report = ""
+
+  Sheet {
+    bind open: showing
+    detents: [.fit]
+    movable: true
+    resizable: true
+    Scroll { Text(report) { selectable: true } }
+  }
+}
+```
+
+| | A movable sheet |
+|---|---|
+| macOS | a window of its own without a title bar (its window's shadow and corners; resizable at its edges with `resizable`), centered over its window and in front of it, fading in where it opens; its window takes no presses, scrolls or hovers meanwhile (a press there dismisses it with `dismissOutside`), and ⌘W closes it |
+| Windows | a modal window over the window in use, which a sheet already is |
+| The web | a card over a backdrop on a wide window, fading in where it opens; resized by its corner with `resizable`, dismissed by a press on the backdrop with `dismissOutside` |
+| iOS, Android, Linux | a sheet as without it: a phone's sheet isn't moved, and libadwaita's dialogs aren't |
+
+A `fullScreen` sheet ignores it.
+
 ### Full-screen sheets
 
 `fullScreen: true` covers the whole screen instead, for a task that takes the

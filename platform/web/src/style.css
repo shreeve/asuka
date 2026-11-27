@@ -505,6 +505,8 @@ textarea.asuka-field { overflow-y: auto; display: block; }
 .asuka-sheet-dialog.asuka-on-window, .asuka-alert.asuka-on-window { position: fixed; inset: auto; margin: 0; }
 /* Full screen: placed by the host (left, top) over the page or a panel's content, square. */
 .asuka-sheet-dialog.asuka-full-screen { inset: auto; margin: 0; border-radius: 0; box-shadow: none; }
+/* Movable: placed by the host (left, top), a Window's panel's corners and its grip (.asuka-window-grip), no bar. */
+.asuka-sheet-dialog.asuka-movable { border-radius: 12px; }
 .asuka-sheet-dialog::backdrop, .asuka-alert::backdrop { background: var(--asuka-scrim); }
 .asuka-sheet { position: absolute; }
 .asuka-grabber { position: absolute; top: 5px; left: calc(50% - 18px); width: 36px; height: 5px; border-radius: 3px; background: var(--asuka-tertiary-label); z-index: 5; cursor: grab; touch-action: none; }

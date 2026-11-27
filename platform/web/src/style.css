@@ -240,13 +240,15 @@ textarea.asuka-field { overflow-y: auto; display: block; }
   appearance: none;
   -webkit-appearance: none;
   position: relative;
-  width: 51px;
-  height: 31px;
+  box-sizing: border-box;
+  width: 32px;
+  height: 20px;
   margin: 0;
+  border: 1px solid var(--asuka-separator);
   border-radius: 999px;
   background: var(--asuka-fill-strong);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, border-color 0.2s;
   flex: none;
 }
 .asuka-switch::before {
@@ -254,16 +256,16 @@ textarea.asuka-field { overflow-y: auto; display: block; }
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 27px;
-  height: 27px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 3px 8px rgb(0 0 0 / 0.15), 0 1px 1px rgb(0 0 0 / 0.16);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   transition: transform 0.2s cubic-bezier(0.3, 0.7, 0.4, 1.2);
 }
-.asuka-switch:checked { background: var(--tint, var(--asuka-green)); }
-.asuka-switch:checked::before { transform: translateX(20px); }
-[dir="rtl"] .asuka-switch:checked::before { transform: translateX(-20px); }
+.asuka-switch:checked { background: var(--tint, var(--asuka-green)); border-color: var(--tint, var(--asuka-green)); }
+.asuka-switch:checked::before { transform: translateX(12px); }
+[dir="rtl"] .asuka-switch:checked::before { transform: translateX(-12px); }
 [dir="rtl"] .asuka-switch::before { left: auto; right: 2px; }
 .asuka-switch:disabled { opacity: 0.5; cursor: default; }
 .asuka-checkbox { width: 20px; height: 20px; margin: 2px; accent-color: var(--tint, var(--asuka-accent)); cursor: pointer; }

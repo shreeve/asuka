@@ -96,26 +96,26 @@ TEST(share_sheet) {
 }
 
 // The app's accent (ui.set_accent, from its init) goes to the host as a
-// root mounts, before its views; a reload that changes it tells the host
-// again, one that doesn't sends nothing.
-static void set_accent(uint64_t color, uint8_t flags) {
-	ak_val a[2] = {{.i = (int64_t)color}, {.i = flags}};
-	ak_builtin_find("ui.set_accent")(a, 2);
+// root mounts, before its views, with its dark mode's; a reload that
+// changes either tells the host again, one that doesn't sends nothing.
+static void set_accent(uint64_t color, uint8_t flags, uint64_t dark) {
+	ak_val a[3] = {{.i = (int64_t)color}, {.i = flags}, {.i = (int64_t)dark}};
+	ak_builtin_find("ui.set_accent")(a, 3);
 }
 
-static uint64_t accent_of(ak_span s) {
+static uint64_t accent_of(ak_span s, uint32_t at) {
 	uint64_t v = 0;
-	for (int i = 7; i >= 0; i--) v = v << 8 | (uint8_t)s.p[i];
+	for (int i = 7; i >= 0; i--) v = v << 8 | (uint8_t)s.p[at + (uint32_t)i];
 	return v;
 }
 
 TEST(accent) {
-	uint64_t purple = 2ull << 32 | 0x7c3aedffu;
-	set_accent(purple, 1);
+	uint64_t purple = 2ull << 32 | 0x7c3aedffu, lavender = 2ull << 32 | 0xb197fcffu;
+	set_accent(purple, 1, lavender);
 	ak_uitest *a = mount(plain_app, NULL);
 	ak_fake *f = ak_uitest_host(a);
 	ak_span s = cmd_args(f, AK_CMD_ACCENT, NULL);
-	CHECK(s.len == 9 && accent_of(s) == purple && s.p[8] == 1);
+	CHECK(s.len == 17 && accent_of(s, 0) == purple && s.p[8] == 1 && accent_of(s, 9) == lavender);
 	// Before any view: the first op that isn't the root's.
 	ak_fake_index_vec cmds = {0};
 	ak_fake_commands(f, AK_CMD_ACCENT, &cmds);
@@ -123,15 +123,20 @@ TEST(accent) {
 	ak_vec_free(&cmds);
 	ak_release(target);
 	ak_fake_reset(f);
-	set_accent(purple, 1);  // a reload with the same one
+	set_accent(purple, 1, lavender);  // a reload with the same one
 	ak_ui_flush();
 	ak_fake_commands(f, AK_CMD_ACCENT, &cmds);
 	CHECK_EQ_INT(cmds.len, 0);
 	ak_vec_free(&cmds);
-	set_accent(0, 0);  // a reload of an app with none: the platform's again
+	set_accent(purple, 1, 0);  // a reload without the dark one: the same in both
 	ak_ui_flush();
 	s = cmd_args(f, AK_CMD_ACCENT, NULL);
-	CHECK(s.len == 9 && accent_of(s) == 0 && s.p[8] == 0);
+	CHECK(s.len == 17 && accent_of(s, 0) == purple && accent_of(s, 9) == 0);
+	ak_fake_reset(f);
+	set_accent(0, 0, 0);  // a reload of an app with none: the platform's again
+	ak_ui_flush();
+	s = cmd_args(f, AK_CMD_ACCENT, NULL);
+	CHECK(s.len == 17 && accent_of(s, 0) == 0 && s.p[8] == 0 && accent_of(s, 9) == 0);
 	done(a);
 	// With none, a root sends nothing.
 	a = mount(plain_app, NULL);

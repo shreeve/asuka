@@ -148,7 +148,7 @@ bool dsk_image_cache_storable(const char *url, const char *cache_control);
 // ---- The app's settings (asuka-app.json) ----
 
 typedef struct {
-	char *name, *id, *version, *build, *accent, *scheme, *file_types;
+	char *name, *id, *version, *build, *accent, *accent_dark, *scheme, *file_types;
 	char *lang, *direction;
 	bool background, keep_running, multiple_instances;
 	char *update_feed, *update_key, *update_target;

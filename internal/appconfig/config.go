@@ -16,6 +16,7 @@ type Config struct {
 	Version           string `json:"version,omitempty"`
 	Build             string `json:"build,omitempty"`
 	Accent            string `json:"accent,omitempty"`
+	AccentDark        string `json:"accentDark,omitempty"`
 	Scheme            string `json:"scheme,omitempty"`
 	FileTypes         string `json:"fileTypes,omitempty"`
 	Lang              string `json:"lang,omitempty"`

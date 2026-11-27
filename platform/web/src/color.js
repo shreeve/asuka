@@ -40,17 +40,18 @@ export function resolve(h, c, fallback = "") {
   return getComputedStyle(h.colorProbe).color;
 }
 
-/** setAccent makes the app's accent the controls' (0: the platform's). */
-export function setAccent(h, c) {
+/**
+ * setAccent makes the app's accent the controls': c in light mode, dark in
+ * dark mode (0: c in both; c 0: the platform's).
+ */
+export function setAccent(h, c, dark = 0) {
   const s = h.container.style;
-  const v = css(h, c);
-  if (v && Math.floor(c / 4294967296) === 2) {
-    s.setProperty("--asuka-accent", v);
-    s.setProperty("--asuka-accent-dark", v);
-  } else {
-    s.removeProperty("--asuka-accent");
-    s.removeProperty("--asuka-accent-dark");
-  }
+  const rgba = (x) => (x && Math.floor(x / 4294967296) === 2 ? css(h, x) : "");
+  const light = rgba(c), night = rgba(dark) || light;
+  if (light) s.setProperty("--asuka-accent-light", light);
+  else s.removeProperty("--asuka-accent-light");
+  if (night) s.setProperty("--asuka-accent-dark", night);
+  else s.removeProperty("--asuka-accent-dark");
 }
 
 export function isDark(h) {

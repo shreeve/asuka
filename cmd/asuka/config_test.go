@@ -37,6 +37,33 @@ func TestAccent(t *testing.T) {
 	}
 }
 
+// accentDark is the accent in dark mode, taken in the accent's form and
+// written to the desktop hosts' settings beside it; without one, the
+// settings carry none and the accent serves both modes.
+func TestAccentDark(t *testing.T) {
+	dir := t.TempDir()
+	write := func(s string) {
+		if err := os.WriteFile(filepath.Join(dir, "asuka.toml"), []byte(s), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("accent = \"#2563eb\"\naccentDark = \"#93c5fd\"")
+	c, err := loadConfig(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.AccentDark != "#93c5fd" {
+		t.Fatalf("accentDark %q", c.AccentDark)
+	}
+	if h := (&asukaApp{cfg: c}).hostConfig(platformMac, "", false); h.Accent != "#2563eb" || h.AccentDark != "#93c5fd" {
+		t.Fatalf("host settings: accent %q, accentDark %q", h.Accent, h.AccentDark)
+	}
+	write(`accent = "#2563eb"`)
+	if c, err := loadConfig(dir); err != nil || (&asukaApp{cfg: c}).hostConfig(platformMac, "", false).AccentDark != "" {
+		t.Fatalf("no accentDark: %v, %v", c, err)
+	}
+}
+
 func TestLinks(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "asuka.toml"), []byte(`id = "com.example.notes"
@@ -328,6 +355,7 @@ func TestConfigErrors(t *testing.T) {
 		"name = \"Notes\"\nbuild = \"7\"":     `asuka.toml:2:9: build: want an integer, not a string`,
 		"[ios]\nteam = \"A\"\n[ios]":          `asuka.toml:3:2: table ios is defined twice`,
 		"accent = \"red\"":                    `asuka.toml: accent "red" (want #rrggbb or #rrggbbaa)`,
+		"accentDark = \"navy\"":               `asuka.toml: accentDark "navy" (want #rrggbb or #rrggbbaa)`,
 		"shareTarget = \"yes\"":               `asuka.toml: shareTarget: want true, or a table of types and max`,
 		"[[widgets]]\nkind = \"a\"\nsize = 1": ``,
 	} {

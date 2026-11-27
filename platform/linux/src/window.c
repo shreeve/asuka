@@ -206,6 +206,7 @@ static void on_dark(GObject *sm, GParamSpec *ps, gpointer data) {
 	(void)ps;
 	(void)data;
 	H.dark = adw_style_manager_get_dark((AdwStyleManager *)sm);
+	if (H.accent_dark) lx_update_css();  // the style's accent
 	lx_theme_changed();
 	lx_tray_style_changed();
 }

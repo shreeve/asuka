@@ -1085,7 +1085,13 @@ final class AsukaTextField: UITextField {
         case .accent:
             guard args.count >= 8 else { return }
             var r = AsukaReader(args)
-            setAccent(asukaColor(r.u64()))
+            let light = asukaColor(r.u64())
+            var dark: UIColor?
+            if args.count >= 17 {
+                _ = r.u8() // Android's wallpaper colors
+                dark = asukaColor(r.u64())
+            }
+            setAccent(asukaAccentColor(light: light, dark: dark))
         case .menuBar, .windowOptions, .windowTitle, .windowAction, .quit:
             break // desktop hosts' (a phone has no menu bar or windows, and its app doesn't quit itself)
         case .location:

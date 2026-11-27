@@ -44,6 +44,9 @@ import AsukaOps
     var animation = AsukaAnimation()
     /// The app's accent (the Accent command's); 0 for the system's.
     var accent: UInt64 = 0
+    /// The app's accent in a dark appearance (the Accent command's); 0 for
+    /// accent's.
+    var accentDark: UInt64 = 0
     var dark = false
     /// The frame clock, while the core wants Frame events.
     var frameClock: AsukaFrameClock?
@@ -97,6 +100,7 @@ import AsukaOps
         NSWindow.allowsAutomaticWindowTabbing = false
         app.delegate = AsukaAppDelegate.shared
         if let c = config.accentColor { accent = c }
+        if let c = config.accentDarkColor { accentDark = c }
         AsukaShell.shared.makeMenuBar()
         makeMainWindow()
         env = environment(main)
@@ -555,6 +559,7 @@ struct AsukaConfig: Decodable {
     var version = ""
     var build = ""
     var accent = ""
+    var accentDark = ""
     var scheme = ""
     var fileTypes = ""
     var lang = ""
@@ -567,7 +572,7 @@ struct AsukaConfig: Decodable {
     var updateTarget = ""
 
     enum CodingKeys: String, CodingKey {
-        case name, id, version, build, accent, scheme, fileTypes, lang, direction, background, keepRunning, multipleInstances, updateFeed, updateKey, updateTarget
+        case name, id, version, build, accent, accentDark, scheme, fileTypes, lang, direction, background, keepRunning, multipleInstances, updateFeed, updateKey, updateTarget
     }
 
     init() {}
@@ -576,7 +581,7 @@ struct AsukaConfig: Decodable {
         let c = try d.container(keyedBy: CodingKeys.self)
         func s(_ k: CodingKeys) -> String { (try? c.decodeIfPresent(String.self, forKey: k)) ?? "" }
         func b(_ k: CodingKeys) -> Bool { (try? c.decodeIfPresent(Bool.self, forKey: k)) ?? false }
-        name = s(.name); id = s(.id); version = s(.version); build = s(.build); accent = s(.accent)
+        name = s(.name); id = s(.id); version = s(.version); build = s(.build); accent = s(.accent); accentDark = s(.accentDark)
         scheme = s(.scheme); fileTypes = s(.fileTypes); lang = s(.lang); direction = s(.direction)
         background = b(.background); keepRunning = b(.keepRunning); multipleInstances = b(.multipleInstances)
         updateFeed = s(.updateFeed); updateKey = s(.updateKey); updateTarget = s(.updateTarget)
@@ -596,8 +601,14 @@ struct AsukaConfig: Decodable {
     }
 
     /// The accent, "#rrggbb" or "#rrggbbaa", as an ops color.
-    var accentColor: UInt64? {
-        var hex = accent
+    var accentColor: UInt64? { Self.hexColor(accent) }
+
+    /// The accent in a dark appearance, likewise.
+    var accentDarkColor: UInt64? { Self.hexColor(accentDark) }
+
+    /// A "#rrggbb" or "#rrggbbaa" color as an ops color.
+    static func hexColor(_ s: String) -> UInt64? {
+        var hex = s
         guard hex.hasPrefix("#") else { return nil }
         hex.removeFirst()
         if hex.count == 6 { hex += "ff" }

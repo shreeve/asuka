@@ -59,7 +59,8 @@
 //	ui.open_url             url: string                                    -
 //	ui.announce             text: string                                   -
 //	ui.a11y_focus           v: View                                        -
-//	ui.set_accent           color: int (the wire's Color), flags: int      -
+//	ui.set_accent           color: int (the wire's Color), flags: int,
+//	                        dark: int (the Color in dark mode, 0: color)   -
 //	ui.call                 module: string, method: string, args: bytes    Task<bytes>
 //	ui.view_id              v: View                                        int
 //	ui.on_open_url          f: fn(string)                                  -

@@ -79,7 +79,8 @@ import AsukaOps
             scrollToOffset(n, CGFloat(b.f32(0)), CGFloat(b.f32(4)), b[8] != 0)
         case .accent:
             guard args.count >= 8 else { return }
-            setAccent(Array(args).u64(0))
+            let b = Array(args)
+            setAccent(b.u64(0), dark: b.count >= 17 ? b.u64(9) : 0) // the dark one after Android's flags
         case .menuBar:
             AsukaShell.shared.setMenuBar(Array(args))
         case .windowOptions:
@@ -107,10 +108,12 @@ import AsukaOps
         }
     }
 
-    /// Makes c the app's accent: Accent colors, filled buttons, links.
-    /// AppKit's own controls keep the system's accent, which the user picks.
-    func setAccent(_ c: UInt64) {
+    /// Makes c the app's accent, and dark its accent in a dark appearance
+    /// (0: c in both): Accent colors, filled buttons, links. AppKit's own
+    /// controls keep the system's accent, which the user picks.
+    func setAccent(_ c: UInt64, dark: UInt64 = 0) {
         accent = c
+        accentDark = dark
         for n in nodes.values {
             if n.kind == .button { buttonVariant(n) } else if n.rich != nil { richInvalidate(n) }
         }

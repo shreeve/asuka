@@ -66,11 +66,14 @@ static palette default_palette(bool dark) {
 	return p;
 }
 
+// app_accent is the app's accent in the current style (0: the theme's).
+static ak_color app_accent(void) { return H.dark && H.accent_dark ? H.accent_dark : H.accent; }
+
 // apply_accent puts the app's accent in the palette (asuka.toml's, as on
 // every platform).
 static void apply_accent(palette *p) {
 	uint8_t r, g, b, a;
-	if (!ak_color_channels(H.accent, &r, &g, &b, &a)) return;
+	if (!ak_color_channels(app_accent(), &r, &g, &b, &a)) return;
 	GdkRGBA c = {(float)r / 255, (float)g / 255, (float)b / 255, 1};
 	p->accent = p->accent_bg = c;
 	if (0.299f * r + 0.587f * g + 0.114f * b > 160)
@@ -172,7 +175,7 @@ void lx_update_css(void) {
 	ak_buf css = {0};
 	ak_buf_put(&css, host_css, sizeof host_css - 1);
 	uint8_t r, g, b, a;
-	if (ak_color_channels(H.accent, &r, &g, &b, &a)) {
+	if (ak_color_channels(app_accent(), &r, &g, &b, &a)) {
 		ak_buf_printf(&css, "@define-color accent_bg_color rgb(%d,%d,%d);\n@define-color accent_color rgb(%d,%d,%d);\n", r, g, b, r, g, b);
 		ak_buf_printf(&css, ":root { --accent-bg-color: rgb(%d,%d,%d); --accent-color: rgb(%d,%d,%d); }\n", r, g, b, r, g, b);
 	}
@@ -248,6 +251,7 @@ void lx_set_dev_font_scale(float s) {
 
 void lx_load_theme(void) {
 	if (!str_empty(H.cfg.accent)) H.accent = lx_parse_accent(H.cfg.accent);
+	if (!str_empty(H.cfg.accent_dark)) H.accent_dark = lx_parse_accent(H.cfg.accent_dark);
 	H.dark = adw_style_manager_get_dark(adw_style_manager_get_default());
 	lx_update_css();
 	H.base = lx_system_font();

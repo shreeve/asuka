@@ -379,6 +379,7 @@ typedef struct {
 	bool dark;
 	palette theme;
 	ak_color accent;
+	ak_color accent_dark;  // the accent in dark mode (0: accent's)
 	HDC measure_dc;
 
 	int depth;          // calls into the core in progress
@@ -584,6 +585,7 @@ uint64_t wh_u64(const uint8_t *b);
 // ---- theme.c: colors, fonts ----
 
 void wh_palette(palette *p, bool dark, ak_color accent);
+ak_color wh_accent(bool dark);
 bool wh_resolve(ak_color c, rgba *out);
 HBRUSH wh_brush(rgba c);
 void wh_clear_brushes(void);

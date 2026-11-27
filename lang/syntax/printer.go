@@ -40,6 +40,16 @@ package syntax
 //     a row; none after an opening brace or before a closing one.
 //
 // Printing a file the printer wrote gives the same bytes again.
+//
+// FormatIndented writes the same program with its blocks by indentation
+// (rfcs/0018): a block of more than one line without its { and }, where
+// the scanner reads the indentation back as the same block. A block
+// keeps its braces inside ( ) or [ ] (where newlines don't count), after
+// =>, when it's empty, when a comment follows its {, when its first line
+// starts with .name outside a match (the scanner would join it to the
+// line before), and when anything but else or catch follows its } on its
+// line (a trailing block's handlers, rule 5). else and catch go on a
+// line of their own.
 
 import (
 	"bytes"
@@ -54,13 +64,23 @@ import (
 // form. A file with syntax errors isn't formatted: Format returns its
 // ErrorList.
 func Format(filename string, src []byte) ([]byte, error) {
+	return format(filename, src, false)
+}
+
+// FormatIndented is Format with the blocks written by indentation where
+// they can be (rfcs/0018).
+func FormatIndented(filename string, src []byte) ([]byte, error) {
+	return format(filename, src, true)
+}
+
+func format(filename string, src []byte, indented bool) ([]byte, error) {
 	fset := NewFileSet()
 	f, errs := ParseFile(fset, filename, src)
 	if len(errs) > 0 {
 		return nil, errs
 	}
 	var b bytes.Buffer
-	if err := Fprint(&b, f.File, f); err != nil {
+	if err := fprint(&b, f.File, f, indented); err != nil {
 		return nil, err
 	}
 	return b.Bytes(), nil
@@ -72,18 +92,30 @@ func Format(filename string, src []byte) ([]byte, error) {
 // A *SourceFile prints with all its comments, any other node with the
 // comments its Trivia hold.
 func Fprint(w io.Writer, file *File, node Node) error {
-	p := &printer{file: file, printed: map[*Comment]bool{}}
-	if f, ok := node.(*SourceFile); ok {
-		if p.file == nil {
-			p.file = f.File
+	return fprint(w, file, node, false)
+}
+
+// fprint prints node, its blocks by indentation if indented. A block
+// written so and then followed on its line by more than else or catch
+// keeps its braces, and the node is printed again.
+func fprint(w io.Writer, file *File, node Node, indented bool) error {
+	keep := map[Pos]bool{}
+	for {
+		p := &printer{file: file, printed: map[*Comment]bool{}, indented: indented, keep: keep}
+		if f, ok := node.(*SourceFile); ok {
+			if p.file == nil {
+				p.file = f.File
+			}
+			p.comments = f.Comments
+			p.sourceFile(f)
+		} else {
+			p.node(node)
 		}
-		p.comments = f.Comments
-		p.sourceFile(f)
-	} else {
-		p.node(node)
+		if !p.retry {
+			_, err := w.Write(p.out)
+			return err
+		}
 	}
-	_, err := w.Write(p.out)
-	return err
 }
 
 type printer struct {
@@ -94,12 +126,46 @@ type printer struct {
 	broken   map[Pos]bool // bodies, by their {, written on one line that don't fit on one
 	indent   int
 	bol      bool // at the start of a line, its indentation not written yet
+
+	// Blocks by indentation: whether to write them, the ( and [ open,
+	// the { of the block just written without braces (until its line
+	// ends), the blocks that keep their braces, and whether one more was
+	// found to (the file is printed again).
+	indented bool
+	depth    int
+	pending  Pos
+	keep     map[Pos]bool
+	retry    bool
 }
 
 // ---------------------------------------------------------------------
 // Output
 
 func (p *printer) write(s string) {
+	if p.pending != NoPos && s != "" {
+		if strings.HasPrefix(s, " else") || strings.HasPrefix(s, " catch") {
+			p.pending = NoPos
+			p.newline()
+			s = s[1:]
+		} else {
+			// Something follows the block on its line: it keeps its braces.
+			p.keep[p.pending], p.retry, p.pending = true, true, NoPos
+		}
+	}
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '(', '[':
+			p.depth++
+		case ')', ']':
+			p.depth--
+		}
+	}
+	p.raw(s)
+}
+
+// raw writes s, after the line's indentation, counting no brackets in
+// it (a comment's text).
+func (p *printer) raw(s string) {
 	if p.bol {
 		for range p.indent {
 			p.out = append(p.out, "  "...)
@@ -112,6 +178,7 @@ func (p *printer) write(s string) {
 func (p *printer) newline() {
 	p.out = append(p.out, '\n')
 	p.bol = true
+	p.pending = NoPos
 }
 
 func (p *printer) comment(c *Comment) {
@@ -121,7 +188,10 @@ func (p *printer) comment(c *Comment) {
 	} else if strings.Contains(text, "\r\n") {
 		text = strings.ReplaceAll(text, "\r\n", "\n") // as every line printed
 	}
-	p.write(text)
+	if p.pending != NoPos {
+		p.write(" ") // a comment on the block's last line: it keeps its braces
+	}
+	p.raw(text)
 	p.printed[c] = true
 }
 
@@ -538,6 +608,16 @@ func (p *printer) body(lbrace Pos, comment *Comment, nodes []Node, dangling []*C
 			p.broken[lbrace] = true
 		}
 	}
+	if p.canIndent(lbrace, comment, nodes) {
+		if n := len(p.out); n > 0 && p.out[n-1] == ' ' {
+			p.out = p.out[:n-1] // the space before the { it doesn't write
+		}
+		p.indent++
+		p.lines(true, lbrace, nodes, dangling, rbrace, "", sep)
+		p.indent--
+		p.pending = lbrace
+		return
+	}
 	p.write("{")
 	if comment != nil {
 		p.write(" ")
@@ -548,6 +628,46 @@ func (p *printer) body(lbrace Pos, comment *Comment, nodes []Node, dangling []*C
 	p.indent--
 	p.newline()
 	p.write("}")
+}
+
+// canIndent reports whether the block at lbrace, about to be written on
+// lines of its own, is written by indentation: in indented mode, outside
+// ( ) and [ ], not after =>, not empty, no comment after its {, its first
+// line not a .name outside a match, and not found to keep its braces.
+func (p *printer) canIndent(lbrace Pos, comment *Comment, nodes []Node) bool {
+	if !p.indented || p.depth > 0 || comment != nil || len(nodes) == 0 || p.keep[lbrace] {
+		return false
+	}
+	line := p.out[bytes.LastIndexByte(p.out, '\n')+1:]
+	if bytes.HasSuffix(bytes.TrimRight(line, " "), []byte("=>")) {
+		return false
+	}
+	if leadsWithImplicit(nodes[0]) && !bytes.Contains(line, []byte("match ")) {
+		return false
+	}
+	return true
+}
+
+// leadsWithImplicit reports whether n's source starts with .name.
+func leadsWithImplicit(n Node) bool {
+	for {
+		switch x := n.(type) {
+		case *ExprStmt:
+			n = x.X
+		case *CallExpr:
+			n = x.Fun
+		case *MemberExpr:
+			n = x.X
+		case *IndexExpr:
+			n = x.X
+		case *UnwrapExpr:
+			n = x.X
+		case *ImplicitMember:
+			return true
+		default:
+			return false
+		}
+	}
 }
 
 func (p *printer) block(b *Block) {

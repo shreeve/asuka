@@ -1,6 +1,7 @@
 package syntax
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"unicode"
@@ -55,6 +56,18 @@ func (c *Comment) IsDoc() bool {
 // may end with a force unwrap, x!) or > (one may end with a generic
 // type, Loading<User>): a comparison broken across lines puts its > at
 // the start of the next line instead.
+//
+// Blocks may be written by indentation (rfcs/0018). Where a line ends a
+// statement (Scan would return a NEWLINE) or ends with else, and the
+// next line that isn't blank or only a comment is indented deeper than
+// the statement's first line, Scan returns the { a brace would have
+// opened instead; where the indentation comes back, it returns the
+// NEWLINE, then a } and a NEWLINE for each block it closes, as braces
+// would have. A deeper line that starts with .name continues the line
+// before (decision 26), except after a statement that holds a match,
+// whose arms it opens. Inside ( ), [ ] and an explicit { } block's
+// first line nothing changes; an explicit { at a line's end opens its
+// block as before, and a block of either kind may hold the other.
 type Scanner struct {
 	file *File
 	src  string
@@ -67,6 +80,17 @@ type Scanner struct {
 	last     Token // the last token returned, for newlines
 	frames   []frame
 	comments []*Comment
+
+	// Blocks by indentation: the tokens queued to return before
+	// scanning on, the indentation of the current statement's first
+	// line, its first token, and whether the next token starts one.
+	queue      []queued
+	stmtIndent int
+	stmtFirst  bool // the statement's first token is its line's first
+	stmtMatch  bool // the statement holds a match (its arms may start .name)
+	headTok    Token
+	startStmt  bool
+	stmts      []stmt // the statements a { left, back at its }
 
 	ErrorCount int
 }
@@ -84,6 +108,24 @@ type frame struct {
 	kind      frameKind
 	multiline bool // interp: in a """ string
 	start     int  // interp: the string's first byte
+	indented  bool // brace: opened by indentation, not a {
+	indent    int  // indented: its lines' indentation
+	outer     int  // indented: the indentation of the line that opened it
+}
+
+// A statement's state, kept while a { inside it is open (a one-line
+// block in a call: Button(if x { "a" } else { "b" })).
+type stmt struct {
+	indent        int
+	first, match_ bool
+	head          Token
+}
+
+// A token Scan returns without scanning: an indented block's { or }, or
+// the NEWLINE that goes with it.
+type queued struct {
+	pos Pos
+	tok Token
 }
 
 const eof = -1
@@ -103,6 +145,9 @@ func (s *Scanner) Init(file *File, src []byte, err ErrorHandler) {
 	s.frames = s.frames[:0]
 	s.comments = nil
 	s.ErrorCount = 0
+	s.queue = s.queue[:0]
+	s.stmts = s.stmts[:0]
+	s.stmtIndent, s.headTok, s.startStmt = 0, ILLEGAL, true
 	s.next()
 	if s.ch == '\uFEFF' {
 		s.next() // a byte order mark
@@ -259,9 +304,233 @@ func (s *Scanner) pop(k frameKind) {
 // Scan returns the next token: its position, its kind and its source
 // text (for every token, so its end is pos+len(lit); "" at the end).
 func (s *Scanner) Scan() (pos Pos, tok Token, lit string) {
-	pos, tok, lit = s.scan()
+	if len(s.queue) > 0 {
+		q := s.queue[0]
+		s.queue = s.queue[1:]
+		pos, tok, lit = q.pos, q.tok, ""
+	} else {
+		pos, tok, lit = s.scan()
+		if tok == EOF && s.closeIndented(pos) {
+			return s.Scan()
+		}
+	}
+	if s.startStmt && tok != NEWLINE && tok != EOF {
+		off := s.file.Offset(pos)
+		s.stmtIndent, s.headTok, s.startStmt, s.stmtMatch = s.lineIndent(off), tok, false, false
+		s.stmtFirst = strings.TrimLeft(s.src[strings.LastIndexByte(s.src[:off], '\n')+1:off], " \t") == ""
+	}
+	switch tok {
+	case MATCH:
+		s.stmtMatch = true
+	case LBRACE:
+		s.stmts = append(s.stmts, stmt{s.stmtIndent, s.stmtFirst, s.stmtMatch, s.headTok})
+		s.startStmt = true
+	case RBRACE:
+		if n := len(s.stmts); n > 0 {
+			st := s.stmts[n-1]
+			s.stmts = s.stmts[:n-1]
+			s.stmtIndent, s.stmtFirst, s.stmtMatch, s.headTok, s.startStmt = st.indent, st.first, st.match_, st.head, false
+		}
+	case NEWLINE, SEMICOLON:
+		s.startStmt = true
+	}
 	s.last = tok
 	return
+}
+
+// lineIndent is the indentation, in columns, of the line holding offset.
+func (s *Scanner) lineIndent(offset int) int {
+	start := strings.LastIndexByte(s.src[:offset], '\n') + 1
+	n := 0
+	for i := start; i < len(s.src) && (s.src[i] == ' ' || s.src[i] == '\t'); i++ {
+		n++
+	}
+	return n
+}
+
+// nextLine finds the next line after from that isn't blank or only a
+// comment: its indentation, the offset of its first character, the
+// offset of the first tab in its indentation (-1 if none), and whether
+// there is one.
+func (s *Scanner) nextLine(from int) (indent, first, tab int, ok bool) {
+	src, i := s.src, from
+	for i < len(src) {
+		n := 0
+		tab = -1
+		for i < len(src) && (src[i] == ' ' || src[i] == '\t') {
+			if src[i] == '\t' && tab < 0 {
+				tab = i
+			}
+			n++
+			i++
+		}
+		switch {
+		case i >= len(src):
+			return 0, i, -1, false
+		case src[i] == '\n' || src[i] == '\r':
+			i++
+			continue
+		case src[i] == '/' && i+1 < len(src) && src[i+1] == '/':
+			for i < len(src) && src[i] != '\n' {
+				i++
+			}
+			continue
+		}
+		return n, i, tab, true
+	}
+	return 0, i, -1, false
+}
+
+// lineTab is the offset of the first tab in the indentation of the line
+// holding offset, or -1 if there is none.
+func (s *Scanner) lineTab(offset int) int {
+	for i := strings.LastIndexByte(s.src[:offset], '\n') + 1; i < len(s.src) && (s.src[i] == ' ' || s.src[i] == '\t'); i++ {
+		if s.src[i] == '\t' {
+			return i
+		}
+	}
+	return -1
+}
+
+// tabs reports a tab in the indentation of a line inside an indented
+// block, which is written with spaces; elsewhere a tab is whitespace in
+// braced code, as in a program inside a Go string.
+func (s *Scanner) tabs(tab int) {
+	if tab >= 0 {
+		s.error(tab, diag.Indentation, "a tab in an indented block's indentation: indent with spaces")
+	}
+}
+
+// opensAt reports whether the next line, indented by indent, starting at
+// first and with its first tab at tab (-1: none), opens a block after the
+// line holding off: the statement starts its line, the next line is
+// deeper, neither line is indented with a tab (tabs are braced code's,
+// as in a program inside a Go string), and the line doesn't end with a
+// block the statement already has. Where no block can follow, a deeper
+// line is only indented, as existing braced code may be.
+func (s *Scanner) opensAt(off, indent, first, tab int) bool {
+	if !s.stmtFirst || indent <= s.stmtIndent || tab >= 0 || s.lineTab(off) >= 0 || !s.opens(first) {
+		return false
+	}
+	if s.last == RBRACE {
+		// After a { } on the line, only a statement whose head is followed
+		// by an expression can still take its block (if let p = spawn { … });
+		// an element's or a declaration's one-line block was its block
+		line := s.src[strings.LastIndexByte(s.src[:off], '\n')+1 : off]
+		if strings.HasPrefix(strings.TrimLeft(line, " \t"), "}") {
+			return false
+		}
+		switch s.headTok {
+		case IF, FOR, WHILE, MATCH:
+			return true
+		}
+		return false
+	}
+	return true
+}
+
+// indentedTop reports whether the innermost frame is a block opened by
+// indentation.
+func (s *Scanner) indentedTop() bool {
+	n := len(s.frames)
+	return n > 0 && s.frames[n-1].kind == brace && s.frames[n-1].indented
+}
+
+// inBlock reports whether newlines count here for a block: at the top
+// of the file or inside a { } of either kind.
+func (s *Scanner) inBlock() bool {
+	n := len(s.frames)
+	return n == 0 || s.frames[n-1].kind == brace
+}
+
+// lineEnd decides, at the newline at off where a NEWLINE would end the
+// line, what Scan returns: an indented block's {, or the NEWLINE and
+// the } of each indented block the next line closes (queued after it).
+func (s *Scanner) lineEnd(off int) (Pos, Token, string) {
+	pos := s.file.Pos(off)
+	indent, first, tab, ok := s.nextLine(off + 1)
+	if !ok {
+		return pos, NEWLINE, "\n" // the end of the file closes them (Scan)
+	}
+	if s.opensAt(off, indent, first, tab) {
+		s.frames = append(s.frames, frame{kind: brace, indented: true, indent: indent, outer: s.stmtIndent})
+		return pos, LBRACE, ""
+	}
+	s.dedent(pos, indent, first)
+	if s.indentedTop() {
+		s.tabs(tab)
+	}
+	return pos, NEWLINE, "\n"
+}
+
+// opens reports whether a deeper line starting at first opens a block:
+// not one that starts with } (it closes a braced block) or .name (it
+// continues the line before), but after a statement that holds a match (it's the first arm: match x,
+// let y = match x).
+func (s *Scanner) opens(first int) bool {
+	if s.src[first] == '}' {
+		return false
+	}
+	if s.src[first] == '.' && first+1 < len(s.src) && isLetter(rune(s.src[first+1])) {
+		return s.stmtMatch
+	}
+	return true
+}
+
+// dedent queues a } and a NEWLINE for each indented block the next line,
+// indented by indent, closes: those whose lines are deeper. A block's }
+// goes after the comments at its indentation that end it, so they stay
+// in it.
+func (s *Scanner) dedent(pos Pos, indent, first int) {
+	closed := -1
+	from := s.file.Offset(pos)
+	for s.indentedTop() && s.frames[len(s.frames)-1].indent > indent {
+		f := s.frames[len(s.frames)-1]
+		closed = f.outer
+		s.frames = s.frames[:len(s.frames)-1]
+		at := s.file.Pos(s.commentsEnd(from, first, f.indent))
+		s.queue = append(s.queue, queued{at, RBRACE}, queued{at, NEWLINE})
+	}
+	if closed >= 0 && indent > closed && !(s.indentedTop() && s.frames[len(s.frames)-1].indent == indent) {
+		s.error(first, diag.Indentation, fmt.Sprintf("this line is indented %d, which no open block is: line it up with the block it belongs to", indent))
+	}
+}
+
+// commentsEnd is where the last comment-only line between from and to
+// indented by at least min ends (its newline), or from if there's none.
+func (s *Scanner) commentsEnd(from, to, min int) int {
+	end, i := from, from
+	for i < to {
+		j := strings.IndexByte(s.src[i:to], '\n')
+		if j < 0 {
+			break
+		}
+		line := s.src[i : i+j]
+		t := strings.TrimLeft(line, " \t")
+		if strings.HasPrefix(t, "//") && len(line)-len(t) >= min {
+			end = i + j
+		}
+		i += j + 1
+	}
+	return end
+}
+
+// closeIndented queues, at the end of the file, a } and a NEWLINE for
+// each indented block still open, then the end itself; it reports
+// whether there were any.
+func (s *Scanner) closeIndented(pos Pos) bool {
+	if !s.indentedTop() {
+		return false
+	}
+	if s.last != NEWLINE {
+		s.queue = append(s.queue, queued{pos, NEWLINE})
+	}
+	for s.indentedTop() {
+		s.frames = s.frames[:len(s.frames)-1]
+		s.queue = append(s.queue, queued{pos, RBRACE}, queued{pos, NEWLINE})
+	}
+	s.queue = append(s.queue, queued{pos, EOF})
+	return true
 }
 
 func (s *Scanner) scan() (Pos, Token, string) {
@@ -277,7 +546,16 @@ redo:
 			if s.newlineCounts() && !s.continued(s.offset+1) {
 				off := s.offset
 				s.next()
-				return s.file.Pos(off), NEWLINE, "\n"
+				return s.lineEnd(off)
+			}
+			if s.last == ELSE && s.inBlock() {
+				// else at a line's end: a deeper line is its block
+				if indent, first, tab, ok := s.nextLine(s.offset + 1); ok && s.opensAt(s.offset, indent, first, tab) {
+					off := s.offset
+					s.next()
+					s.frames = append(s.frames, frame{kind: brace, indented: true, indent: indent, outer: s.stmtIndent})
+					return s.file.Pos(off), LBRACE, ""
+				}
 			}
 			s.next()
 			continue
@@ -606,7 +884,7 @@ func (s *Scanner) digits(ok func(rune) bool) {
 	}
 }
 
-// char scans a char literal at s.ch == '\'': one code point, or an
+// char scans a char literal at s.ch == '\”: one code point, or an
 // escape (\n, \', \u{1F600}), between single quotes. What's more is an
 // error, as is an empty one: a string holds more (or none).
 func (s *Scanner) char(start int) (Pos, Token, string) {

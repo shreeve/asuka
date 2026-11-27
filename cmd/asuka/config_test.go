@@ -356,6 +356,7 @@ func TestConfigErrors(t *testing.T) {
 		"[ios]\nteam = \"A\"\n[ios]":          `asuka.toml:3:2: table ios is defined twice`,
 		"accent = \"red\"":                    `asuka.toml: accent "red" (want #rrggbb or #rrggbbaa)`,
 		"accentDark = \"navy\"":               `asuka.toml: accentDark "navy" (want #rrggbb or #rrggbbaa)`,
+		"[web.colors]\nlabelDark = \"gray\"":  `asuka.toml: web.colors.labelDark "gray" (want #rrggbb or #rrggbbaa)`,
 		"shareTarget = \"yes\"":               `asuka.toml: shareTarget: want true, or a table of types and max`,
 		"[[widgets]]\nkind = \"a\"\nsize = 1": ``,
 	} {
@@ -364,5 +365,42 @@ func TestConfigErrors(t *testing.T) {
 		if got := fmt.Sprint(err); want == "" && err != nil || want != "" && got != want {
 			t.Errorf("%q: got %v, want %s", doc, err, want)
 		}
+	}
+}
+
+// [web.colors] is the web page's palette: a style sheet after the host's
+// with each color set, light and dark (a color with no dark one in both),
+// and the browser's theme color from the background; with none, the page
+// is the host's alone.
+func TestWebColors(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "asuka.toml"), []byte(`[web.colors]
+label = "#16181d"
+labelDark = "#e8e9eb"
+separator = "dfe1e5"
+background = "#ffffff"
+backgroundDark = "#101114"
+cardDark = "#1b1d21"
+`), 0o644)
+	c, err := loadConfig(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := ".asuka { --asuka-label: #16181d; --asuka-background: #ffffff; --asuka-separator: #dfe1e5; }\n" +
+		".asuka.asuka-dark { --asuka-label: #e8e9eb; --asuka-background: #101114; --asuka-separator: #dfe1e5; --asuka-card: #1b1d21; }\n"
+	if got := c.Web.Colors.css(); got != want {
+		t.Fatalf("css:\n%s\nwant:\n%s", got, want)
+	}
+	page := webIndex(webPage{Name: "Notes", Lang: "en", Host: "asuka/x", Core: "asuka.wasm", Colors: c.Web.Colors})
+	if i, j := strings.Index(page, `<link rel="stylesheet"`), strings.Index(page, "<style>\n"+want+"</style>"); j < 0 || j < i {
+		t.Fatalf("no style sheet after the host's:\n%s", page)
+	}
+	if !strings.Contains(page, `<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">`) ||
+		!strings.Contains(page, `<meta name="theme-color" content="#101114" media="(prefers-color-scheme: dark)">`) {
+		t.Fatalf("theme colors:\n%s", page)
+	}
+	if page := webIndex(webPage{Name: "Notes", Lang: "en", Host: "asuka/x", Core: "asuka.wasm"}); strings.Contains(page, "<style>") ||
+		!strings.Contains(page, `content="#121212" media="(prefers-color-scheme: dark)"`) {
+		t.Fatalf("no colors:\n%s", page)
 	}
 }

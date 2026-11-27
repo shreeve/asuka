@@ -193,6 +193,30 @@ The environment a web app sees (`environment()`) is the browser's:
   apps show the app's menus: the Mac's menu bar, the window's menu bar
   on Windows, the header bar's main menu on Linux.
 
+## The palette
+
+The page draws in a palette of Asuka's, Apple's colors in light and
+dark: `.label` is black in light mode, the page's background white.
+`[web.colors]` in `asuka.toml` replaces any of them, with a color for
+dark mode beside each:
+
+```toml
+[web.colors]
+label = "#16181d"
+labelDark = "#e8e9eb"
+separator = "#dfe1e5"
+separatorDark = "#3a3d42"
+```
+
+A color reaches everything that draws in its role: `label` is the
+color of a Text that names none and of a field's text, `separator` the
+lines between rows and around controls, and so on ([the
+keys](asuka-toml.md#web)). The page shows the dark ones while it's dark,
+by the browser's `prefers-color-scheme` or the app's
+`appearance.setColorScheme(.dark)`. A color without its dark one is the
+same in both, and one left out keeps Asuka's. Only the web takes them:
+the other platforms draw their semantic colors in the system's.
+
 ## The app's files
 
 The app's directory (`fs.appDir()`), with what `std/fs` writes there

@@ -110,6 +110,9 @@ type webPage struct {
 	// Scripts are its native packages' generated JavaScript, loaded
 	// before it starts: they register the packages' modules and views.
 	Scripts []string
+	// Colors is asuka.toml's [web.colors]: a style sheet after the
+	// host's, and the browser's theme color from its background.
+	Colors webColors
 }
 
 // launchColors are the splash's colors, light and dark (the light one
@@ -152,6 +155,14 @@ func webIndex(p webPage) string {
 		opts[k] = v
 	}
 	o, _ := json.Marshal(opts)
+	// The browser's theme color: the page's background, light and dark.
+	themeLight, themeDark := "#ffffff", "#121212" // the host's
+	if bg := p.Colors.Background; bg != "" {
+		themeLight, themeDark = cssHex(bg), cssHex(bg)
+	}
+	if bg := p.Colors.BackgroundDark; bg != "" {
+		themeDark = cssHex(bg)
+	}
 	var b strings.Builder
 	fmt.Fprintf(&b, `<!doctype html>
 <html lang="%s">
@@ -160,13 +171,13 @@ func webIndex(p webPage) string {
 <base href="%[3]s">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="%[4]s" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="%[5]s" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="%[2]s">
 <title>%[2]s</title>
-`, html.EscapeString(p.Lang), html.EscapeString(p.Name), html.EscapeString(siteBase(p.Base)))
+`, html.EscapeString(p.Lang), html.EscapeString(p.Name), html.EscapeString(siteBase(p.Base)), themeLight, themeDark)
 	if p.Manifest {
 		b.WriteString(`<link rel="manifest" href="manifest.webmanifest">` + "\n")
 	}
@@ -179,7 +190,7 @@ func webIndex(p webPage) string {
 	fmt.Fprintf(&b, `<link rel="stylesheet" href="%[1]s/style.css">
 <link rel="modulepreload" href="%[1]s/asuka.js">
 <link rel="preload" href="%[2]s" as="fetch" type="application/wasm" crossorigin>
-</head>
+%[5]s</head>
 <body>
 <script type="module">
 import * as asuka from "./%[1]s/asuka.js";
@@ -188,8 +199,16 @@ globalThis.asuka = asuka;
 </script>
 </body>
 </html>
-`, p.Host, p.Core, o, imports(p.Scripts))
+`, p.Host, p.Core, o, imports(p.Scripts), style(p.Colors.css()))
 	return b.String()
+}
+
+// style is css in a <style> element ("" for none).
+func style(css string) string {
+	if css == "" {
+		return ""
+	}
+	return "<style>\n" + css + "</style>\n"
 }
 
 // webScript is a native package's file among the host's
@@ -795,6 +814,7 @@ func (s *devServer) index(w http.ResponseWriter) {
 		Host: "asuka", Core: "asuka.wasm?" + s.stamp,
 		Scripts: prefixed("asuka/", scriptPaths(*s.scripts.Load())), Icon: s.app.cfg.Icon != "",
 		Options: opts,
+		Colors:  s.app.cfg.Web.Colors,
 	}))
 }
 
@@ -1097,6 +1117,9 @@ func buildWeb(app *asukaApp, o *buildOptions) error {
 	if app.cfg.Accent != "" {
 		manifest["theme_color"] = app.cfg.Accent
 	}
+	if bg := app.cfg.Web.Colors.Background; bg != "" {
+		manifest["background_color"] = cssHex(bg)
+	}
 	if icon {
 		manifest["icons"] = []map[string]string{
 			{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
@@ -1159,6 +1182,7 @@ func buildWeb(app *asukaApp, o *buildOptions) error {
 		Icon:     icon,
 		Manifest: true,
 		Scripts:  scripts,
+		Colors:   app.cfg.Web.Colors,
 	})
 	if err := os.WriteFile(filepath.Join(out, "index.html"), []byte(page), 0o644); err != nil {
 		return err

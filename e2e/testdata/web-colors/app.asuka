@@ -1,0 +1,35 @@
+// Web colors sets the web host's palette from asuka.toml's [web.colors]
+// (e2e's TestWebColorsWeb): a Text that names no color, a field and a
+// stepper draw in it; the buttons show the app dark or as the system is.
+
+import platform/appearance
+
+component WebColors {
+  state name = ""
+  state cups = 2.0
+
+  SafeArea {
+    padding: 16
+    gap: 12
+
+    Text("Plain")
+    TextField {
+      bind text: name
+      placeholder: "Name"
+    }
+    Stepper {
+      bind value: cups
+      min: 1
+      max: 8
+    }
+    Button("Dark") {
+      on press { appearance.setColorScheme(.dark) }
+    }
+    Button("System") {
+      on press { appearance.setColorScheme(.system) }
+    }
+    Text("ready")
+  }
+}
+
+app { WebColors() }

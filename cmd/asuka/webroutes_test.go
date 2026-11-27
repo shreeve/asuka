@@ -20,6 +20,20 @@ func TestWebIndexBase(t *testing.T) {
 	}
 }
 
+// The page downloads the app's font files as it starts, beside the core:
+// a preload each, which the host's FontFace then finds.
+func TestWebIndexPreloadsFonts(t *testing.T) {
+	page := webIndex(webPage{Name: "A", Host: "asuka", Core: "asuka.wasm", Options: map[string]any{"fonts": []string{"Inter-Regular.woff2", "Brand.ttf"}}})
+	for _, f := range []string{"Inter-Regular.woff2", "Brand.ttf"} {
+		if want := `<link rel="preload" href="assets/fonts/` + f + `" as="font" crossorigin>`; !strings.Contains(page, want) {
+			t.Errorf("no %s in:\n%s", want, page)
+		}
+	}
+	if page := webIndex(webPage{Name: "A", Host: "asuka", Core: "asuka.wasm"}); strings.Contains(page, `as="font"`) {
+		t.Errorf("an app without fonts preloads one:\n%s", page)
+	}
+}
+
 // A static site serves the page for its routes' paths (Netlify's
 // rewrite), and its headers are under its base.
 func TestWebSiteRewritesAndHeaders(t *testing.T) {

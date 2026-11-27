@@ -152,7 +152,9 @@ The environment a web app sees (`environment()`) is the browser's:
 - Text is the browser's text in the system's font (`system-ui`: San
   Francisco on Apple's systems, Segoe UI on Windows, Roboto on Android),
   on a type ramp of the web's (body 16). The app's fonts in
-  `assets/fonts` load as the app names them (a font's `family`).
+  `assets/fonts` load as the app names them (a font's `family`). The
+  page starts downloading them as it loads, beside the core, not when
+  text first asks for one.
 - A `Stack` shows its top screen under a header bar of its own: a back
   button, the screen's title, its bar buttons, its search field. Pushes
   and pops slide. Going back is the browser's too: its back button (and

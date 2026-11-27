@@ -1,0 +1,23 @@
+// Font Preload shows a line in the app's own font beside its status, on
+// its first screen (e2e's TestFontPreloadWeb, which copies the gallery's
+// assets/fonts beside it: Pacifico-Regular.ttf and its OFL).
+
+component FontPreload {
+  Column {
+    padding: 24
+    Row {
+      gap: 12
+      align: .center
+      Text("Hamburgefonstiv") { font: .title.family("Pacifico") }
+      Text("status: ready")
+    }
+  }
+}
+
+app { FontPreload() }
+
+test "it shows its line and its status" {
+  let app = mount(FontPreload())
+  app.expect("Hamburgefonstiv")
+  app.expect("status: ready")
+}

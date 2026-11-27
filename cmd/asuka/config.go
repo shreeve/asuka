@@ -401,6 +401,10 @@ type appConfig struct {
 		// subscribes with it, and the server signs with its private key
 		// (asuka/webpush: GenerateKeys makes a pair).
 		VapidPublicKey string `json:"vapidPublicKey"`
+		// FontFeatures are OpenType features the page's text has on
+		// (font-feature-settings): "tnum" for tabular figures, "cv11" and
+		// "ss01" for a font's alternates.
+		FontFeatures []string `json:"fontFeatures"`
 		// Base is the path the site is served at ("/app/" for
 		// https://example.com/app/; default "/"): the page's <base href>,
 		// so that its files are found from any route's path, and under
@@ -438,6 +442,9 @@ var (
 	scheme   = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+.-]*$`)
 	domain   = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+$`)
 )
+
+// fontFeature is an OpenType feature's tag: four letters or digits.
+var fontFeature = regexp.MustCompile(`^[a-zA-Z0-9]{4}$`)
 
 // configFile is an app's manifest, in its directory.
 const configFile = "asuka.toml"
@@ -505,6 +512,11 @@ func loadConfig(dir string) (*appConfig, error) {
 	for _, r := range c.Bluetooth.Background {
 		if r != "central" && r != "peripheral" {
 			return nil, fmt.Errorf("asuka.toml: bluetooth background %q (want central or peripheral)", r)
+		}
+	}
+	for _, f := range c.Web.FontFeatures {
+		if !fontFeature.MatchString(f) {
+			return nil, fmt.Errorf("asuka.toml: web.fontFeatures %q (want a four-letter OpenType tag, as \"tnum\")", f)
 		}
 	}
 	if err := c.C.Check(); err != nil {

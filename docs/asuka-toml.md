@@ -501,6 +501,7 @@ The web build's.
 | Key | Type | Default | What it is |
 |---|---|---|---|
 | `vapidPublicKey` | string | none | The app server's VAPID public key (base64url), with which the browser subscribes to Web Push for `platform/push`. |
+| `fontFeatures` | strings | none | OpenType features the page's text has on, as four-letter tags: `["tnum"]` for tabular figures (digits of one width, so dates and numbers line up), `"cv11"` and `"ss01"` for a font's alternates. |
 | `base` | string | `"/"` | The path the site is served at (`"/app/"` for `https://example.com/app/`): the page's `<base href>`, under which a router's hrefs are its addresses. `asuka build --base` overrides it. See [Addresses and history](web.md#addresses-and-history). |
 | `colors` | table | Asuka's | The page's palette, light and dark: the table below. See [The palette](web.md#the-palette). |
 

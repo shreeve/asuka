@@ -1,0 +1,136 @@
+// Package platform/activity is the user's activity in the app: when they
+// last pressed, touched, typed, scrolled or edited text in any of its
+// windows. It only watches: the app's views get every event as before.
+//
+//   // Sign out after 15 minutes without input.
+//   task {
+//     while true {
+//       let left = 15min - activity.idleTime()
+//       if left <= 0s { await signOut() } else { await sleep(left) }
+//     }
+//   }
+//
+// What counts is what a user does: a press (a mouse's button, a finger
+// or a pen touching down, a trackpad's click), a key, a wheel or
+// trackpad scroll, a text edit (a software keyboard's too). A pointer
+// only moving doesn't, nor what the app does itself (a scroll it
+// starts, a field's text it sets). power.idleTime is the other kind:
+// the whole computer's idle time, every app's input, on desktops only.
+//
+// Tests drive a fake: activity.fake() gives the package a FakeActivity,
+// whose input() is the user's.
+
+import std/time
+
+/// The platform's watch over the app's input. Made once: it watches
+/// from then on, in every window the app has or opens.
+///
+/// @mainThread
+native interface Watcher {
+  /// How long since the user's last input in the app (before any, since
+  /// the app's first Watcher was made).
+  fn idle() -> Duration
+  /// Calls input as the user gives input, at most once a second, until
+  /// the task is cancelled.
+  async fn watch(input: fn())
+}
+
+// Made once, as the app starts; none where the platform has no code for
+// it (asuka test's host, a program).
+let watcher = try? Watcher()
+
+// When the package started, on Asuka's clock: a platform without a
+// watcher answers from it.
+let started = time.monotonic()
+
+// The fake a test installed (fake()).
+state faked: FakeActivity? = none
+
+/// Whether the platform watches the app's input (iOS, the Mac, Windows,
+/// Linux, the web; not yet Android), or a test's fake stands in for it.
+pub fn available() -> bool {
+  if let _ = faked {
+    return true
+  }
+  if let _ = watcher {
+    return true
+  }
+  return false
+}
+
+/// How long since the user's last input in the app: a press, a touch, a
+/// key, a scroll, a text edit. Before any, since the app started; where
+/// the platform doesn't watch (available() false), always that.
+pub fn idleTime() -> Duration {
+  if let f = faked {
+    return f.idleTime()
+  }
+  if let w = watcher {
+    if let d = try? w.idle() {
+      return d
+    }
+  }
+  return time.monotonic() - started
+}
+
+/// When the user last gave the app input (idleTime()'s time ago), on the
+/// wall clock.
+pub fn lastInput() -> time.Time = time.now().minus(idleTime())
+
+/// The time of each input as the user gives it, at most one a second:
+/// to put off a timeout, to dismiss a warning. None where the platform
+/// doesn't watch.
+pub fn inputs() -> Stream<time.Time> = Stream(send => {
+  if let f = faked {
+    let id = f.onInput(() => send(time.now()))
+    defer { f.unlisten(id) }
+    await never()
+  }
+  if let w = watcher {
+    try await w.watch(input: () => send(time.now()))
+  }
+})
+
+/// A stand-in for the platform in tests (fake()): the user's input is
+/// what the test says, on the test's clock.
+pub store FakeActivity {
+  /// When the user last gave input, on time.monotonic()'s clock (the
+  /// test's, which its sleeps move): when the fake was made, before any.
+  pub state last: Duration = time.monotonic()
+  state readers: [int: fn()] = [:]
+  // When the readers last heard of an input.
+  state told: Duration? = none
+  state nextID = 0
+
+  /// The user pressed, touched, typed or scrolled: now. The package's
+  /// inputs() hear it, at most once a second, as on the platforms.
+  pub fn input() {
+    last = time.monotonic()
+    if readers.isEmpty() || told != none && last - told! < 1s {
+      return
+    }
+    told = last
+    for r in readers.values() { r() }
+  }
+
+  /// How long since the input last was.
+  pub fn idleTime() -> Duration = time.monotonic() - last
+
+  fn onInput(f: fn()) -> int {
+    nextID += 1
+    readers[nextID] = f
+    return nextID
+  }
+
+  fn unlisten(id: int) {
+    readers.remove(id)
+  }
+}
+
+/// Installs a FakeActivity, for a test: from now on the package reads
+/// it, not the platform.
+pub fn fake() -> FakeActivity {
+  let f = FakeActivity()
+  faked = f
+  return f
+}

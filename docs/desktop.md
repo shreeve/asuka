@@ -710,7 +710,7 @@ streams of the computer sleeping and waking and the screen locking, and
 `power.idleTime()` is how long the user has been away from the whole
 computer. Phones have lock and unlock, but no suspend or idle time; the
 web, the battery alone. The time since the user's last input in the app
-itself, for an inactivity timeout, is `activity.idle()`
+itself, for an inactivity timeout, is `activity.idleTime()`
 ([platform/activity](device.md#the-users-activity-platformactivity)).
 
 ```asuka

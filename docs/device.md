@@ -1532,9 +1532,9 @@ too). A pointer only moving doesn't count, nor what the app does itself
 timeout: a warning, then signing out, after so long with no input. It
 only watches: the app's views get every event as before.
 
-`activity.idle()` is how long since the last input, `activity.lastInput()`
-when it was (a `time.Time`), and `activity.inputs()` a stream of each
-input's time, at most one a second.
+`activity.idleTime()` is how long since the last input,
+`activity.lastInput()` when it was (a `time.Time`), and
+`activity.inputs()` a stream of each input's time, at most one a second.
 
 ```asuka
 import platform/activity
@@ -1548,7 +1548,7 @@ component SignedIn {
   // Asleep until the warning's due; then a countdown, which input ends.
   task {
     while !signedOut {
-      let idle = activity.idle()
+      let idle = activity.idleTime()
       if idle >= limit {
         signedOut = true
       } else if idle >= limit - warning {
@@ -1584,7 +1584,7 @@ document's capturing, passive listeners (`pointerdown`, `keydown`,
 `wheel`, `input`). The clock goes on while the device sleeps, so the
 time asleep counts as idle. Android hasn't it yet: there, and where an
 app runs with no platform code (`asuka test`'s host, a program),
-`activity.available()` is false and `idle()` is the time since the app
+`activity.available()` is false and `idleTime()` is the time since the app
 started. `power.idleTime()` is the other kind: the whole computer's,
 every app's input, on desktops only.
 

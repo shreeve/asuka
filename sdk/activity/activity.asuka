@@ -5,7 +5,7 @@
 //   // Sign out after 15 minutes without input.
 //   task {
 //     while true {
-//       let left = 15min - activity.idle()
+//       let left = 15min - activity.idleTime()
 //       if left <= 0s { await signOut() } else { await sleep(left) }
 //     }
 //   }
@@ -61,9 +61,9 @@ pub fn available() -> bool {
 /// How long since the user's last input in the app: a press, a touch, a
 /// key, a scroll, a text edit. Before any, since the app started; where
 /// the platform doesn't watch (available() false), always that.
-pub fn idle() -> Duration {
+pub fn idleTime() -> Duration {
   if let f = faked {
-    return f.idle()
+    return f.idleTime()
   }
   if let w = watcher {
     if let d = try? w.idle() {
@@ -73,9 +73,9 @@ pub fn idle() -> Duration {
   return time.monotonic() - started
 }
 
-/// When the user last gave the app input (idle()'s time ago), on the
+/// When the user last gave the app input (idleTime()'s time ago), on the
 /// wall clock.
-pub fn lastInput() -> time.Time = time.now().minus(idle())
+pub fn lastInput() -> time.Time = time.now().minus(idleTime())
 
 /// The time of each input as the user gives it, at most one a second:
 /// to put off a timeout, to dismiss a warning. None where the platform
@@ -114,7 +114,7 @@ pub store FakeActivity {
   }
 
   /// How long since the input last was.
-  pub fn idle() -> Duration = time.monotonic() - last
+  pub fn idleTime() -> Duration = time.monotonic() - last
 
   fn onInput(f: fn()) -> int {
     nextID += 1
